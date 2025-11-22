@@ -1,3 +1,8 @@
 MODEL4/
 MODEL13/
 Nail_Disease.ipynb
+.dart_tool/
+build/
+.dart_tool/
+.flutter-plugins
+.packages
