@@ -18,7 +18,7 @@ void main() async {
   runApp(
     MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: DashboardPage(), // ← Opens dashboard directly
+      home: ProfilePage(), // ← Opens dashboard directly
     ),
   );
 }
