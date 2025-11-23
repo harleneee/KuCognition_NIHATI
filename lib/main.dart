@@ -8,18 +8,21 @@ import 'screens/signup_page.dart';
 import 'screens/dashboard_page.dart';
 import 'screens/profile_page.dart';
 import 'screens/scan_page.dart';
-import 'screens/result_page.dart';
 import 'screens/history_page.dart';
 import 'screens/uploaded_page.dart';
+import 'screens/learnmore_page.dart';
+import 'screens/diseaseresults_page.dart';   
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // runApp(const NailHealthApp());
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(
     MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const UploadedPage(),
+      home: LearnMorePage(),     // ← testing page
     ),
   );
 }
@@ -39,12 +42,15 @@ class NailHealthApp extends StatelessWidget {
         '/signup': (context) => const SignUpPage(),
         '/dashboard': (context) => DashboardPage(),
         '/scan': (context) => const ScanPage(),
-        '/result': (context) => const ResultPage(),
+
+        // ❗ FIXED: Correct screen for disease results
+        '/result': (context) => DiseaseDetailsPage(
+              disease: "Onychomycosis",   // placeholder
+            ),
+
         '/history': (context) => const HistoryPage(),
         '/profile': (context) => ProfilePage(),
-        '': (context) => ProfilePage(),
         '/upload': (context) => const UploadedPage(),
-
       },
     );
   }
