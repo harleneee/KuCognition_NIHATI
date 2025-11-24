@@ -12,6 +12,8 @@ import 'screens/history_page.dart';
 import 'screens/uploaded_page.dart';
 import 'screens/learnmore_page.dart';
 import 'screens/diseaseresults_page.dart';   
+import 'screens/uploaded_result.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,7 +24,7 @@ void main() async {
   runApp(
     MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: LearnMorePage(),     // ← testing page
+      home: UploadedResult(),     // ← testing page
     ),
   );
 }
@@ -51,6 +53,12 @@ class NailHealthApp extends StatelessWidget {
         '/history': (context) => const HistoryPage(),
         '/profile': (context) => ProfilePage(),
         '/upload': (context) => const UploadedPage(),
+        '/uploaded_result': (context) => const UploadedResult(),
+
+
+
+
+
       },
     );
   }

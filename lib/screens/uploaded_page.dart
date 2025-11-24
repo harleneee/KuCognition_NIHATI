@@ -43,21 +43,11 @@ class _UploadedPageState extends State<UploadedPage> {
     });
 
     try {
-      // TODO: replace this with real analysis / navigation
-      await Future.delayed(const Duration(seconds: 2));
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Analysis complete (demo).'),
-        ),
-      );
-      // Example later:
-      // Navigator.pushNamed(context, '/result', arguments: _selectedImage!.path);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Something went wrong during analysis.'),
-        ),
+      // 👉 Go to uploaded_result screen and pass the image path
+      Navigator.pushNamed(
+        context,
+        '/uploaded_result',           // route name in main.dart
+        arguments: _selectedImage!.path, // pass the file path
       );
     } finally {
       if (mounted) {
