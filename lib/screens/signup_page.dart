@@ -15,8 +15,22 @@ class _SignUpPageState extends State<SignUpPage> {
   final birthdayController = TextEditingController();
   final phoneController = TextEditingController();
   final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
 
   bool isLoading = false;
+  bool _passwordVisible = false;
+  bool _confirmPasswordVisible = false;
+
+  @override
+  void dispose() {
+    usernameController.dispose();
+    emailController.dispose();
+    birthdayController.dispose();
+    phoneController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   Future<void> registerUser() async {
     final username = usernameController.text.trim();
@@ -24,13 +38,31 @@ class _SignUpPageState extends State<SignUpPage> {
     final birthday = birthdayController.text.trim();
     final phone = phoneController.text.trim();
     final password = passwordController.text.trim();
+    final confirmPassword = confirmPasswordController.text.trim();
 
+    // Basic validations
     if (username.isEmpty ||
         email.isEmpty ||
         birthday.isEmpty ||
         phone.isEmpty ||
-        password.isEmpty) {
+        password.isEmpty ||
+        confirmPassword.isEmpty) {
       showError("Please fill out all fields.");
+      return;
+    }
+
+    if (!email.contains("@") || !email.contains(".")) {
+      showError("Please enter a valid email address.");
+      return;
+    }
+
+    if (password.length < 6) {
+      showError("Password must be at least 6 characters.");
+      return;
+    }
+
+    if (password != confirmPassword) {
+      showError("Passwords do not match.");
       return;
     }
 
@@ -46,12 +78,14 @@ class _SignUpPageState extends State<SignUpPage> {
           .collection("users")
           .doc(userCred.user!.uid)
           .set({
-            "username": username,
-            "email": email,
-            "birthday": birthday,
-            "phone": phone,
-            "createdAt": DateTime.now().toIso8601String(),
-          });
+        "username": username,
+        "email": email,
+        "birthday": birthday,
+        "phone": phone,
+        "createdAt": DateTime.now().toIso8601String(),
+      });
+
+      if (!mounted) return;
 
       // SUCCESS POPUP
       showDialog(
@@ -68,7 +102,7 @@ class _SignUpPageState extends State<SignUpPage> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(context); // close dialog
                 Navigator.pushReplacementNamed(context, "/login");
               },
               child: const Text("OK"),
@@ -77,12 +111,33 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
       );
     } on FirebaseAuthException catch (e) {
-      showError(e.message ?? "Signup failed.");
+      String msg = "Signup failed.";
+
+      switch (e.code) {
+        case 'email-already-in-use':
+          msg = "This email is already registered.";
+          break;
+        case 'invalid-email':
+          msg = "The email address is not valid.";
+          break;
+        case 'weak-password':
+          msg = "The password is too weak.";
+          break;
+        case 'operation-not-allowed':
+          msg = "Email/password sign-up is not enabled.";
+          break;
+        default:
+          msg = e.message ?? "Signup failed. Please try again.";
+      }
+
+      showError(msg);
     } catch (e) {
       showError("Unexpected error: $e");
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
-
-    setState(() => isLoading = false);
   }
 
   void showError(String message) {
@@ -96,11 +151,11 @@ class _SignUpPageState extends State<SignUpPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFEAF5FD),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(25),
+        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 60),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 80),
+            const SizedBox(height: 20),
             const Text(
               "Sign Up",
               style: TextStyle(
@@ -133,23 +188,70 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
             const SizedBox(height: 15),
 
-            _inputField("Password", passwordController, obscure: true),
+            // Password
+            _inputField(
+              "Password",
+              passwordController,
+              obscure: !_passwordVisible,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _passwordVisible
+                      ? Icons.visibility_off
+                      : Icons.visibility,
+                  color: const Color(0xFF6D777F),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _passwordVisible = !_passwordVisible;
+                  });
+                },
+              ),
+            ),
+            const SizedBox(height: 15),
+
+            // Confirm Password
+            _inputField(
+              "Confirm Password",
+              confirmPasswordController,
+              obscure: !_confirmPasswordVisible,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _confirmPasswordVisible
+                      ? Icons.visibility_off
+                      : Icons.visibility,
+                  color: const Color(0xFF6D777F),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _confirmPasswordVisible = !_confirmPasswordVisible;
+                  });
+                },
+              ),
+            ),
             const SizedBox(height: 30),
 
-            // REGISTER BUTTON
+            // REGISTER BUTTON (matching Login pill style + white text)
             isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B87D2),
-                      minimumSize: const Size(double.infinity, 50),
-                    ),
-                    onPressed: registerUser,
-                    child: const Text(
-                      "Register",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                : SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3B87D2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 3,
+                      ),
+                      onPressed: registerUser,
+                      child: const Text(
+                        "Register",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white, // 👈 fix color
+                        ),
                       ),
                     ),
                   ),
@@ -181,6 +283,7 @@ class _SignUpPageState extends State<SignUpPage> {
     TextEditingController controller, {
     bool obscure = false,
     TextInputType keyboardType = TextInputType.text,
+    Widget? suffixIcon,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,7 +296,7 @@ class _SignUpPageState extends State<SignUpPage> {
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12), // match login
             boxShadow: const [
               BoxShadow(
                 blurRadius: 4,
@@ -206,9 +309,13 @@ class _SignUpPageState extends State<SignUpPage> {
             controller: controller,
             obscureText: obscure,
             keyboardType: keyboardType,
-            decoration: const InputDecoration(
-              contentPadding: EdgeInsets.symmetric(horizontal: 15),
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 15,
+                vertical: 15,
+              ), // match login padding
               border: InputBorder.none,
+              suffixIcon: suffixIcon,
             ),
           ),
         ),

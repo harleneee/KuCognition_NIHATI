@@ -43,11 +43,10 @@ class _UploadedPageState extends State<UploadedPage> {
     });
 
     try {
-      // 👉 Go to uploaded_result screen and pass the image path
       Navigator.pushNamed(
         context,
-        '/uploaded_result',           // route name in main.dart
-        arguments: _selectedImage!.path, // pass the file path
+        '/uploaded_result',
+        arguments: _selectedImage!.path,
       );
     } finally {
       if (mounted) {
@@ -58,6 +57,7 @@ class _UploadedPageState extends State<UploadedPage> {
     }
   }
 
+  // 🔧 UPDATED: really discards the photo when user confirms
   Future<void> _handleCancel() async {
     if (_selectedImage != null) {
       final bool? shouldDiscard = await showDialog<bool>(
@@ -83,11 +83,20 @@ class _UploadedPageState extends State<UploadedPage> {
         ),
       );
 
-      if (shouldDiscard != true) {
-        return;
+      if (shouldDiscard == true) {
+        // clear the selected image
+        setState(() {
+          _selectedImage = null;
+        });
+
+        // then go back
+        Navigator.of(context).maybePop();
       }
+
+      return; // stop here so it doesn’t fall through
     }
 
+    // no image selected → just go back
     Navigator.of(context).maybePop();
   }
 
@@ -126,7 +135,7 @@ class _UploadedPageState extends State<UploadedPage> {
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
-                      vertical: 32,
+                      vertical: 24, // slightly less vertical padding
                     ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8F7FF),
@@ -167,9 +176,9 @@ class _UploadedPageState extends State<UploadedPage> {
                             ],
                           )
                         : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Image preview with its own border
+                              // 🟦 Image preview with max height so it never overflows
                               Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
@@ -178,10 +187,12 @@ class _UploadedPageState extends State<UploadedPage> {
                                     width: 1,
                                   ),
                                 ),
-                                child: AspectRatio(
-                                  aspectRatio: 3 / 4,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    // <- cap the height to avoid overflow
+                                    height: 260,
                                     child: Image.file(
                                       File(_selectedImage!.path),
                                       fit: BoxFit.cover,
@@ -189,7 +200,7 @@ class _UploadedPageState extends State<UploadedPage> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 12),
                               TextButton.icon(
                                 onPressed: _pickImage,
                                 icon: const Icon(
@@ -256,8 +267,9 @@ class _UploadedPageState extends State<UploadedPage> {
                   elevation: 3,
                   shadowColor: Colors.black26,
                 ),
-                onPressed:
-                    (_selectedImage == null || _isAnalyzing) ? null : _analyzeImage,
+                onPressed: (_selectedImage == null || _isAnalyzing)
+                    ? null
+                    : _analyzeImage,
                 child: _isAnalyzing
                     ? Row(
                         mainAxisAlignment: MainAxisAlignment.center,

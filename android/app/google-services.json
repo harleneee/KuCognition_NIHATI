@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "222093951130",
-    "project_id": "kucognition-app",
-    "storage_bucket": "kucognition-app.firebasestorage.app"
+    "project_number": "24514503294",
+    "project_id": "kucognition-app-8cf64",
+    "storage_bucket": "kucognition-app-8cf64.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:222093951130:android:e1adae79cca6a90c901f23",
+        "mobilesdk_app_id": "1:24514503294:android:2ebedc924655d875bbae2f",
         "android_client_info": {
           "package_name": "com.example.kucognition_app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBVgboq5lXFm9Ap3AcPx7uQZQbDm0QkXNU"
+          "current_key": "AIzaSyBm3_kTUhmipAFbpO4JaBBd7JUnuyveSuI"
         }
       ],
       "services": {
