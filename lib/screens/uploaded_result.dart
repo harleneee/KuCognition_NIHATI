@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 class UploadedResult extends StatelessWidget {
   const UploadedResult({super.key});
 
-  /// All disease info in one map so it’s easy to hook to the model later.
-  /// For now, confidence & risk are placeholder values per disease.
+  /// All disease info in one map so it’s easy to hook to the model.
+  /// "confidence" here is just a fallback if model confidence is missing.
   static const Map<String, Map<String, String>> diseaseInfo = {
     'Acral Lentiginous Melanoma': {
       'displayName': 'Acral Lentiginous Melanoma',
       'color': 'Dark brown or black streak',
       'texture': 'Smooth but widening band',
       'pattern': 'Irregular borders / widening over time',
-      'confidence': '82%', // placeholder
+      'confidence': '82%', // fallback only
       'risk': 'High',
       'description':
           'Acral lentiginous melanoma is a serious form of skin cancer that '
@@ -32,7 +32,7 @@ class UploadedResult extends StatelessWidget {
       'color': 'Normal or slightly red',
       'texture': 'Soft spongy nail bed',
       'shape': 'Downward-curving, bulbous fingertip',
-      'confidence': '88%', // placeholder
+      'confidence': '88%', // fallback
       'risk': 'Moderate',
       'description':
           'Nail clubbing is a change in the shape of the fingertips where the nails '
@@ -50,7 +50,7 @@ class UploadedResult extends StatelessWidget {
       'color': 'Pink nail bed',
       'texture': 'Smooth surface',
       'shape': 'Even thickness, natural curve',
-      'confidence': '94%', // placeholder
+      'confidence': '94%', // fallback
       'risk': 'Low',
       'description':
           'A healthy nail appears smooth, evenly colored, and firmly attached to the nail bed. '
@@ -66,7 +66,7 @@ class UploadedResult extends StatelessWidget {
       'color': 'Yellow-brown',
       'texture': 'Thick and hard',
       'shape': 'Curved or ram’s horn growth',
-      'confidence': '90%', // placeholder
+      'confidence': '90%', // fallback
       'risk': 'Moderate',
       'description':
           'Onychogryphosis is a condition where the nail becomes thick, overgrown, and curved in '
@@ -83,7 +83,7 @@ class UploadedResult extends StatelessWidget {
       'color': 'Pale or yellowish spots',
       'texture': 'Pitted / dented surface',
       'shape': 'Slightly irregular edges',
-      'confidence': '87%', // placeholder
+      'confidence': '87%', // fallback
       'risk': 'Moderate',
       'description':
           'Nail pitting refers to tiny indentations or dents in the surface of the nail. It is often '
@@ -95,6 +95,20 @@ class UploadedResult extends StatelessWidget {
           'for psoriasis, joint symptoms, or other autoimmune conditions, which makes treatment more effective '
           'and reduces the risk of long-term complications.',
     },
+    'Unknown / Not in trained classes': {
+      'displayName': 'Unknown / Not in trained classes',
+      'color': 'Varies',
+      'texture': 'Varies',
+      'shape': 'Not recognized',
+      'confidence': '—',
+      'risk': 'Unknown',
+      'description':
+          'The uploaded image does not closely match any of the five nail conditions that this model '
+          'was specifically trained on. The result is therefore marked as unknown. This does not mean '
+          'the nail is healthy or unhealthy—it simply indicates that the pattern falls outside the '
+          'model’s trained categories. For unusual, rapidly changing, or worrying nail appearances, '
+          'a consultation with a healthcare professional is strongly recommended.',
+    },
   };
 
   @override
@@ -103,14 +117,37 @@ class UploadedResult extends StatelessWidget {
 
     String? imagePath;
     String predictionKey = 'Healthy Nail'; // default
+    String? rawLabelFromModel;
+    double? modelConfidence; // 0–1 from backend
 
+    // 🔹 Read arguments passed from UploadedPage
     if (args is String) {
+      // old style: only imagePath string
       imagePath = args;
     } else if (args is Map) {
       imagePath = args['imagePath'] as String?;
-      final dynamic pred = args['prediction'];
-      if (pred is String && diseaseInfo.containsKey(pred)) {
-        predictionKey = pred;
+      final dynamic labelArg = args['label'];
+      final dynamic confArg = args['confidence'];
+
+      if (labelArg is String) {
+        rawLabelFromModel = labelArg;
+      }
+
+      if (confArg is num) {
+        modelConfidence = confArg.toDouble();
+      } else if (confArg is String) {
+        // just in case backend returns as string
+        modelConfidence = double.tryParse(confArg);
+      }
+    }
+
+    // 🔹 Decide which disease key to use
+    if (rawLabelFromModel != null) {
+      if (diseaseInfo.containsKey(rawLabelFromModel)) {
+        predictionKey = rawLabelFromModel!;
+      } else {
+        // label came from model but not in our five classes
+        predictionKey = 'Unknown / Not in trained classes';
       }
     }
 
@@ -121,8 +158,15 @@ class UploadedResult extends StatelessWidget {
     final String? texture = info['texture'];
     final String? shape = info['shape'] ?? info['pattern'];
     final String description = info['description'] ?? '';
-    final String confidence = info['confidence'] ?? '—';
     final String risk = info['risk'] ?? '—';
+
+    // 🔹 Confidence text: use model value if available, else fallback from map
+    String confidenceText;
+    if (modelConfidence != null) {
+      confidenceText = '${(modelConfidence * 100).toStringAsFixed(1)}%';
+    } else {
+      confidenceText = info['confidence'] ?? '—';
+    }
 
     final String fileName = imagePath != null
         ? imagePath.split(Platform.pathSeparator).last
@@ -233,7 +277,7 @@ class UploadedResult extends StatelessWidget {
 
             const SizedBox(height: 18),
 
-            // --- Prediction card (UI polish) ---
+            // --- Prediction card ---
             Container(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
               decoration: BoxDecoration(
@@ -287,7 +331,7 @@ class UploadedResult extends StatelessWidget {
                       Expanded(
                         child: _pill(
                           label: 'Confidence',
-                          value: confidence,
+                          value: confidenceText,
                           bgColor: const Color(0xFFE3F2FD),
                           textColor: const Color(0xFF1E88E5),
                         ),
@@ -301,12 +345,16 @@ class UploadedResult extends StatelessWidget {
                               ? const Color(0xFFFFEBEE)
                               : (risk == 'Moderate'
                                   ? const Color(0xFFFFF8E1)
-                                  : const Color(0xFFE8F5E9)),
+                                  : risk == 'Unknown'
+                                      ? const Color(0xFFE0E0E0)
+                                      : const Color(0xFFE8F5E9)),
                           textColor: risk == 'High'
                               ? const Color(0xFFC62828)
                               : (risk == 'Moderate'
                                   ? const Color(0xFFEF6C00)
-                                  : const Color(0xFF2E7D32)),
+                                  : risk == 'Unknown'
+                                      ? const Color(0xFF424242)
+                                      : const Color(0xFF2E7D32)),
                         ),
                       ),
                     ],
@@ -359,7 +407,7 @@ class UploadedResult extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // View full results button
+            // View full results button (stub)
             SizedBox(
               height: 44,
               child: ElevatedButton(

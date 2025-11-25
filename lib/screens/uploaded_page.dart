@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:kucognition_app/data/api_service.dart';
+
 
 class UploadedPage extends StatefulWidget {
   const UploadedPage({super.key});
@@ -35,6 +37,7 @@ class _UploadedPageState extends State<UploadedPage> {
     }
   }
 
+  // 🔵 UPDATED: now calls backend and sends result to uploaded_result page
   Future<void> _analyzeImage() async {
     if (_selectedImage == null || _isAnalyzing) return;
 
@@ -43,10 +46,24 @@ class _UploadedPageState extends State<UploadedPage> {
     });
 
     try {
+      // Call backend API with the selected image
+      final result = await ApiService.predictNailDisease(
+        File(_selectedImage!.path),
+      );
+
+      // Navigate to result screen with image + prediction data
       Navigator.pushNamed(
         context,
         '/uploaded_result',
-        arguments: _selectedImage!.path,
+        arguments: {
+          'imagePath': _selectedImage!.path,
+          'label': result['label'],
+          'confidence': result['confidence'],
+        },
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error analyzing image: $e')),
       );
     } finally {
       if (mounted) {
