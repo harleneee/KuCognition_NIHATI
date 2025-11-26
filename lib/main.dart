@@ -11,22 +11,15 @@ import 'screens/scan_page.dart';
 import 'screens/history_page.dart';
 import 'screens/uploaded_page.dart';
 import 'screens/learnmore_page.dart';
-import 'screens/diseaseresults_page.dart';   
+import 'screens/diseaseresults_page.dart';
 import 'screens/uploaded_result.dart';
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
-  runApp(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: DashboardScreen(),     // ← testing page
-    ),
-  );
+  runApp(const NailHealthApp());
 }
 
 class NailHealthApp extends StatelessWidget {
@@ -37,7 +30,18 @@ class NailHealthApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Nail Health Detection',
-      initialRoute: '/dashboard',
+
+      // OPTION A → Use home: when testing a specific screen
+      // home: SignUpPage(),     
+      // home: LoginPage(),       // ← UNCOMMENT when testing login
+      // home: UploadedPage(),    
+      // home: DashboardPage(),
+      // home: ScanPage(),
+      home: UploadedPage(),
+
+      // OPTION B → Use your normal navigation
+      // initialRoute: '/start',    // ← your real starting screen
+
       routes: {
         '/start': (context) => StartPage(),
         '/login': (context) => const LoginPage(),
@@ -46,9 +50,8 @@ class NailHealthApp extends StatelessWidget {
         '/scan': (context) => ScanPage(),
         '/learnmore' : (context) => LearnMorePage(),
 
-        // ❗ FIXED: Correct screen for disease results
         '/result': (context) => DiseaseDetailsPage(
-              disease: "Onychomycosis",   // placeholder
+              disease: "Onychomycosis",
             ),
 
         '/history': (context) => const HistoryPage(),

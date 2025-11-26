@@ -41,48 +41,47 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDnUfaOVkC7QCyzNd31z5-jVBo-owPERvU',
-    appId: '1:222093951130:web:c8ebd24701207723901f23',
-    messagingSenderId: '222093951130',
-    projectId: 'kucognition-app',
-    authDomain: 'kucognition-app.firebaseapp.com',
-    storageBucket: 'kucognition-app.firebasestorage.app',
-    measurementId: 'G-748SSBKBY5',
+    apiKey: 'AIzaSyCNnRk1KJxwyTCqA6NOpjI8-MBVRnyAulM',
+    appId: '1:24514503294:web:20850655a4f3323bbbae2f',
+    messagingSenderId: '24514503294',
+    projectId: 'kucognition-app-8cf64',
+    authDomain: 'kucognition-app-8cf64.firebaseapp.com',
+    storageBucket: 'kucognition-app-8cf64.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBVgboq5lXFm9Ap3AcPx7uQZQbDm0QkXNU',
-    appId: '1:222093951130:android:e1adae79cca6a90c901f23',
-    messagingSenderId: '222093951130',
-    projectId: 'kucognition-app',
-    storageBucket: 'kucognition-app.firebasestorage.app',
+    apiKey: 'AIzaSyBm3_kTUhmipAFbpO4JaBBd7JUnuyveSuI',
+    appId: '1:24514503294:android:2ebedc924655d875bbae2f',
+    messagingSenderId: '24514503294',
+    projectId: 'kucognition-app-8cf64',
+    storageBucket: 'kucognition-app-8cf64.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAH3V6UvgNaXo-jgNmFB6953x9u6O7hzE0',
-    appId: '1:222093951130:ios:2a545e174619de78901f23',
-    messagingSenderId: '222093951130',
-    projectId: 'kucognition-app',
-    storageBucket: 'kucognition-app.firebasestorage.app',
+    apiKey: 'AIzaSyBezzkAsA4BV2i6f7b8pbwm_SnitEwF5bQ',
+    appId: '1:24514503294:ios:8d820cc7cfc36e88bbae2f',
+    messagingSenderId: '24514503294',
+    projectId: 'kucognition-app-8cf64',
+    storageBucket: 'kucognition-app-8cf64.firebasestorage.app',
     iosBundleId: 'com.example.kucognitionApp',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyAH3V6UvgNaXo-jgNmFB6953x9u6O7hzE0',
-    appId: '1:222093951130:ios:2a545e174619de78901f23',
-    messagingSenderId: '222093951130',
-    projectId: 'kucognition-app',
-    storageBucket: 'kucognition-app.firebasestorage.app',
+    apiKey: 'AIzaSyBezzkAsA4BV2i6f7b8pbwm_SnitEwF5bQ',
+    appId: '1:24514503294:ios:8d820cc7cfc36e88bbae2f',
+    messagingSenderId: '24514503294',
+    projectId: 'kucognition-app-8cf64',
+    storageBucket: 'kucognition-app-8cf64.firebasestorage.app',
     iosBundleId: 'com.example.kucognitionApp',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDnUfaOVkC7QCyzNd31z5-jVBo-owPERvU',
-    appId: '1:222093951130:web:e447eca432859fed901f23',
-    messagingSenderId: '222093951130',
-    projectId: 'kucognition-app',
-    authDomain: 'kucognition-app.firebaseapp.com',
-    storageBucket: 'kucognition-app.firebasestorage.app',
-    measurementId: 'G-T5FRR3FPMQ',
+    apiKey: 'AIzaSyCNnRk1KJxwyTCqA6NOpjI8-MBVRnyAulM',
+    appId: '1:24514503294:web:e12e7116e408084bbbae2f',
+    messagingSenderId: '24514503294',
+    projectId: 'kucognition-app-8cf64',
+    authDomain: 'kucognition-app-8cf64.firebaseapp.com',
+    storageBucket: 'kucognition-app-8cf64.firebasestorage.app',
   );
+
 }
