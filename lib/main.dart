@@ -12,6 +12,8 @@ import 'screens/history_page.dart';
 import 'screens/uploaded_page.dart';
 import 'screens/learnmore_page.dart';
 import 'screens/diseaseresults_page.dart';   
+import 'screens/uploaded_result.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,7 +24,7 @@ void main() async {
   runApp(
     MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: LearnMorePage(),     // ← testing page
+      home: DashboardScreen(),     // ← testing page
     ),
   );
 }
@@ -37,11 +39,12 @@ class NailHealthApp extends StatelessWidget {
       title: 'Nail Health Detection',
       initialRoute: '/dashboard',
       routes: {
-        '/start': (context) => const StartPage(),
+        '/start': (context) => StartPage(),
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignUpPage(),
-        '/dashboard': (context) => DashboardPage(),
-        '/scan': (context) => const ScanPage(),
+        '/dashboard': (context) => DashboardScreen(),
+        '/scan': (context) => ScanPage(),
+        '/learnmore' : (context) => LearnMorePage(),
 
         // ❗ FIXED: Correct screen for disease results
         '/result': (context) => DiseaseDetailsPage(
@@ -51,6 +54,7 @@ class NailHealthApp extends StatelessWidget {
         '/history': (context) => const HistoryPage(),
         '/profile': (context) => ProfilePage(),
         '/upload': (context) => const UploadedPage(),
+        '/uploaded_result': (context) => const UploadedResult(),
       },
     );
   }
