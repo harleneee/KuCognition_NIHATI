@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
-
-void main() {
-  runApp(MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: ProfilePage(),
-  ));
-}
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -15,25 +10,86 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final bool useMockData = true;
-
-  final Map<String, dynamic> mockUserData = {
-    "username": "Emily Nelson",
-    "email": "emily.n@hotmail.com",
-    "sex": "Female",
-    "birthday": "December 07, 2001",
-    "profileImageUrl": "https://picsum.photos/395/588",
-    "totalScans": 3,
-    "mostCommonResult": "Healthy Nails",
-    "lastScan": "No scans yet",
-  };
-
+  Map<String, dynamic>? userData;
+  bool isLoading = true;
   bool isAboutSelected = true;
 
   @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() {
+          userData = {};
+          isLoading = false;
+        });
+        return;
+      }
+
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (snap.exists) {
+        final data = snap.data()!;
+        setState(() {
+          userData = {
+            "fullName": data["fullName"] ?? "No name",
+            "email": data["email"] ?? user.email ?? "",
+            "sex": data["sex"] ?? "Not set",
+            "birthday": data["birthday"] ?? "Not set",
+            "profileImageUrl": data["profileImageUrl"] ?? "",
+            "totalScans": data["totalScans"] ?? 0,
+            "mostCommonResult": data["mostCommonResult"] ?? "None yet",
+            "lastScan": data["lastScan"] ?? "No scans yet",
+          };
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          userData = {
+            "fullName": user.email ?? "User",
+            "email": user.email ?? "",
+            "sex": "Not set",
+            "birthday": "Not set",
+            "profileImageUrl": "",
+            "totalScans": 0,
+            "mostCommonResult": "None yet",
+            "lastScan": "No scans yet",
+          };
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        userData = {};
+        isLoading = false;
+      });
+    }
+  }
+
+  void _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, "/login");
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic> data =
-        useMockData ? mockUserData : <String, dynamic>{};
+    if (isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFEAF5FD),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final data = userData ?? {};
 
     return Scaffold(
       backgroundColor: const Color(0xFFEAF5FD),
@@ -70,7 +126,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   Expanded(
                     child: _topCard(
                       "Total Scans",
-                      data["totalScans"].toString(),
+                      (data["totalScans"] ?? 0).toString(),
                       height: 120,
                     ),
                   ),
@@ -78,7 +134,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   Expanded(
                     child: _topCard(
                       "Most Common Result",
-                      data["mostCommonResult"],
+                      data["mostCommonResult"] ?? "None yet",
                       height: 120,
                     ),
                   ),
@@ -89,7 +145,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
               _topCard(
                 "Last Scan",
-                data["lastScan"],
+                data["lastScan"] ?? "No scans yet",
                 height: 110,
                 isFullWidth: true,
               ),
@@ -143,7 +199,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ABOUT / HISTORY TABS
   Widget _aboutHistoryTabs() {
     return Container(
       padding: const EdgeInsets.all(4),
@@ -193,8 +248,31 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // PROFILE CARD — with highlighted labels
   Widget _profileHeaderCard(Map<String, dynamic> data) {
+    final String fullName = data["fullName"] ?? "No name";
+    final String email = data["email"] ?? "";
+    final String sex = data["sex"] ?? "Not set";
+    final String birthday = data["birthday"] ?? "Not set";
+    final String profileImageUrl = data["profileImageUrl"] ?? "";
+
+    Widget avatarChild;
+    if (profileImageUrl.isNotEmpty) {
+      avatarChild = CircleAvatar(
+        radius: 46,
+        backgroundImage: NetworkImage(profileImageUrl),
+      );
+    } else {
+      avatarChild = const CircleAvatar(
+        radius: 46,
+        backgroundColor: Color(0xFFEAF5FD),
+        child: Icon(
+          Icons.person,
+          size: 40,
+          color: Color(0xFF6D777F),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.fromLTRB(26, 28, 22, 28),
       constraints: const BoxConstraints(minHeight: 190),
@@ -214,10 +292,7 @@ class _ProfilePageState extends State<ProfilePage> {
           CircleAvatar(
             radius: 50,
             backgroundColor: Colors.white,
-            child: CircleAvatar(
-              radius: 46,
-              backgroundImage: NetworkImage(data["profileImageUrl"]),
-            ),
+            child: avatarChild,
           ),
           const SizedBox(width: 26),
           Expanded(
@@ -225,7 +300,7 @@ class _ProfilePageState extends State<ProfilePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  data["username"],
+                  fullName,
                   style: const TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
@@ -234,7 +309,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  data["email"],
+                  email,
                   style: const TextStyle(
                     fontSize: 14,
                     color: Color(0xFF79838B),
@@ -251,7 +326,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 Text(
-                  data["sex"],
+                  sex,
                   style: const TextStyle(
                     fontSize: 14,
                     color: Color(0xFF6D777F),
@@ -269,7 +344,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 Text(
-                  data["birthday"],
+                  birthday,
                   style: const TextStyle(
                     fontSize: 14,
                     color: Color(0xFF6D777F),
@@ -283,7 +358,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // EDIT PROFILE BUTTON (text back to white)
   Widget _editProfileButton() {
     return ElevatedButton.icon(
       style: ElevatedButton.styleFrom(
@@ -295,23 +369,24 @@ class _ProfilePageState extends State<ProfilePage> {
         elevation: 5,
         shadowColor: Colors.black26,
       ),
-      onPressed: () {},
+      onPressed: () {
+        // TODO: Add edit profile screen later
+      },
       icon: const Icon(Icons.edit, color: Colors.white, size: 20),
       label: const Text(
         "Edit Profile",
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w700,
-          color: Colors.white, // <- back to white
+          color: Colors.white,
         ),
       ),
     );
   }
 
-  // LOGOUT BUTTON — narrower + smaller
   Widget _logoutButton() {
     return FractionallySizedBox(
-      widthFactor: 0.5, // 60% of available width
+      widthFactor: 0.5,
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color.fromARGB(255, 238, 142, 142),
@@ -321,9 +396,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           elevation: 3,
         ),
-        onPressed: () {
-          // TODO: Add logout logic
-        },
+        onPressed: _logout,
         icon: const Icon(Icons.logout, color: Colors.white, size: 20),
         label: const Text(
           "Log Out",
@@ -337,7 +410,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // STAT CARDS – with FittedBox to avoid overflow
   Widget _topCard(
     String title,
     String value, {
