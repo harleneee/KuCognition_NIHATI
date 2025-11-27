@@ -11,66 +11,55 @@ class ResultPage extends StatelessWidget {
       'color': 'Dark brown or black streak',
       'texture': 'Smooth but widening band',
       'shape': 'Irregular border, progressive widening',
-      'confidence': '82%',
       'risk': 'High',
       'description':
-          'Acral lentiginous melanoma is a rare but aggressive type of skin cancer '
-          'that appears under nails. It may look like a bruise or streak. Early '
-          'professional diagnosis is critical to survival.',
+          'Acral lentiginous melanoma is a rare but aggressive form of melanoma that typically appears under the nails. '
+          'It can look like a bruise or dark streak. Early professional diagnosis is critical.',
     },
     'Clubbing': {
       'displayName': 'Clubbing',
       'color': 'Normal or reddish',
       'texture': 'Spongy nail bed',
-      'shape': 'Bulbous fingertip & curved nail',
-      'confidence': '88%',
+      'shape': 'Bulbous fingertip, curved nail',
       'risk': 'Moderate',
       'description':
-          'Nail clubbing is associated with cardiovascular or pulmonary disease. '
-          'It may be a sign of chronic inflammation, heart defects, or cancer.',
+          'Nail clubbing may be related to chronic heart or lung disease, inflammatory disorders, or cancer.',
     },
     'Healthy Nail': {
       'displayName': 'Healthy Nail',
       'color': 'Pink nail bed',
-      'texture': 'Smooth surface',
+      'texture': 'Smooth and uniform',
       'shape': 'Even thickness, natural curve',
-      'confidence': '94%',
       'risk': 'Low',
       'description':
-          'This nail appears within normal visual parameters. '
-          'No indication of fungal or systemic disease.',
+          'This scan shows no signs of fungal infection, inflammation, or systemic nail irregularities.',
     },
     'Onychogryphosis': {
       'displayName': 'Onychogryphosis',
       'color': 'Yellow-brown',
       'texture': 'Hard, thickened',
-      'shape': 'Curved horn-like growth',
-      'confidence': '90%',
+      'shape': 'Curved horn-like nail',
       'risk': 'Moderate',
       'description':
-          'Thickened and curved nail linked to trauma, poor circulation, '
-          'aging, or chronic disease.',
+          'A thick, curved nail often associated with trauma, poor circulation, or long-term systemic issues.',
     },
     'Pitting': {
-      'displayName': 'Pitting',
+      'displayName': 'Nail Pitting',
       'color': 'Pale or yellow dots',
       'texture': 'Small dents',
       'shape': 'Irregular surface',
-      'confidence': '87%',
       'risk': 'Moderate',
       'description':
-          'Nail pitting is associated with psoriasis and autoimmune disorders. '
-          'It may indicate inflammatory disease.',
+          'Pitting may indicate autoimmune disorders, including psoriasis or systemic inflammatory disease.',
     },
     'Unknown': {
       'displayName': 'Unknown Condition',
       'color': '—',
       'texture': '—',
       'shape': '—',
-      'confidence': '—',
       'risk': 'Unknown',
       'description':
-          'The model could not confidently match this nail to a trained class.',
+          'The model could not confidently classify this nail to any known category.',
     },
   };
 
@@ -82,82 +71,90 @@ class ResultPage extends StatelessWidget {
     final String rawLabel = args?['label'] ?? "Unknown";
     final double? confidence = args?['confidence'];
 
-    // Match label to known categories
     final info = diseaseInfo[rawLabel] ?? diseaseInfo['Unknown']!;
-    final displayName = info['displayName'];
+    final label = info['displayName']!;
+    final risk = info['risk']!;
+    final desc = info['description']!;
     final color = info['color'];
     final texture = info['texture'];
     final shape = info['shape'];
-    final desc = info['description'];
-    final risk = info['risk'];
 
-    // Format confidence
-    String confString;
-    if (confidence != null) {
-      confString = "${(confidence * 100).toStringAsFixed(1)}%";
-    } else {
-      confString = info['confidence'] ?? '—';
-    }
+    final confString = confidence != null
+        ? "${(confidence * 100).toStringAsFixed(1)}%"
+        : "—";
+
+    Color riskColor = Colors.grey;
+    if (risk == "High") riskColor = Colors.red;
+    if (risk == "Moderate") riskColor = Colors.orange;
+    if (risk == "Low") riskColor = Colors.green;
 
     return Scaffold(
       backgroundColor: const Color(0xFFEAF5FD),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFEAF5FD),
         elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          "🩺 AI Nail Scan Result",
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF001372),
-          ),
-        ),
+        backgroundColor: const Color(0xFFEAF5FD),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF001372)),
           onPressed: () => Navigator.pop(context),
         ),
+        centerTitle: true,
+        title: const Text(
+          "🔬 AI Nail Scan Result",
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF001372),
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history, color: Color(0xFF001372)),
+            onPressed: () => Navigator.pushNamed(context, '/history'),
+          ),
+        ],
       ),
 
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(18, 6, 18, 30),
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 30),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔥 IMAGE PREVIEW
+            // ===============================
+            // SCANNED IMAGE
+            // ===============================
             Container(
-              height: 220,
+              height: 230,
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
+                color: Colors.white,
+                boxShadow: _shadow(),
               ),
               child: imagePath == null
                   ? const Center(child: Icon(Icons.image, size: 40))
                   : Image.file(File(imagePath), fit: BoxFit.cover),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
-            // ==========================================
-            // CARD 1 — Prediction
-            // ==========================================
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: _card(),
+            // ===============================
+            // PREDICTED CONDITION CARD
+            // ===============================
+            _infoCard(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     "Detected Condition",
                     style: TextStyle(
-                      color: Colors.black54,
                       fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      color: Colors.black45,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    displayName ?? rawLabel,
-                    textAlign: TextAlign.center,
+                    label,
                     style: const TextStyle(
                       fontSize: 22,
                       color: Color(0xFF001372),
@@ -168,45 +165,39 @@ class ResultPage extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
 
-            // ==========================================
-            // CARD 2 — Confidence + Risk
-            // ==========================================
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: _card(),
-              child: Column(
-                children: [
-                  _pill(
-                    "Confidence",
-                    confString,
-                    const Color(0xFFE3F2FD),
-                    const Color(0xFF1565C0),
+            // ===============================
+            // CONFIDENCE / RISK
+            // ===============================
+            Row(
+              children: [
+                Expanded(
+                  child: _badgeCard(
+                    title: "Confidence",
+                    value: confString,
+                    color: Colors.blue.shade50,
+                    textColor: Colors.blue.shade700,
                   ),
-                  const SizedBox(height: 8),
-                  _pill(
-                    "Risk Level",
-                    risk ?? "—",
-                    risk == "High"
-                        ? const Color(0xFFFFEBEE)
-                        : const Color(0xFFE8F5E9),
-                    risk == "High"
-                        ? const Color(0xFFC62828)
-                        : const Color(0xFF2E7D32),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _badgeCard(
+                    title: "Risk Level",
+                    value: risk,
+                    color: riskColor.withOpacity(.15),
+                    textColor: riskColor,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 18),
 
-            // ==========================================
-            // CARD 3 — Physical characteristics
-            // ==========================================
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: _card(),
+            // ===============================
+            // VISUAL FEATURES
+            // ===============================
+            _infoCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -217,24 +208,23 @@ class ResultPage extends StatelessWidget {
                       color: Color(0xFF001372),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  _bullet("Color", color),
-                  _bullet("Texture", texture),
-                  _bullet("Shape / Pattern", shape),
+                  const SizedBox(height: 8),
+                  _detail("Color", color),
+                  _detail("Texture", texture),
+                  _detail("Shape / Pattern", shape),
                 ],
               ),
             ),
 
             const SizedBox(height: 18),
 
-            // ==========================================
-            // CARD 4 — Medical Explanation
-            // ==========================================
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: _card(color: const Color(0xFFC0E4FF)),
+            // ===============================
+            // MEDICAL EXPLANATION
+            // ===============================
+            _infoCard(
+              background: const Color(0xFFDCEFFF),
               child: Text(
-                desc ?? '',
+                desc,
                 style: const TextStyle(
                   fontSize: 13,
                   height: 1.4,
@@ -243,29 +233,54 @@ class ResultPage extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 26),
+            const SizedBox(height: 24),
 
-            // DONE BUTTON
-            SizedBox(
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B87D2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+            // ===============================
+            // ACTION BUTTONS
+            // ===============================
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3B87D2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text("Done"),
                   ),
                 ),
-                child: const Text("Done"),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pushNamed(context, '/history'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Color(0xFF3B87D2),
+                      side: const BorderSide(
+                        color: Color(0xFF3B87D2),
+                        width: 1.6,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text("History"),
+                  ),
+                ),
+              ],
             ),
 
-            const SizedBox(height: 10),
-
-            const Text(
-              "DISCLAIMER: Predictions are AI-based pattern interpretations.\nThis is not a medical diagnosis.",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 10, color: Color(0xFFC62828)),
+            const SizedBox(height: 16),
+            const Center(
+              child: Text(
+                "DISCLAIMER: This is an AI pattern analysis.\nNot a medical diagnosis.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 10, color: Colors.red),
+              ),
             ),
           ],
         ),
@@ -273,46 +288,47 @@ class ResultPage extends StatelessWidget {
     );
   }
 
-  // ======== UI Helpers =========
+  // ===============================
+  // UI HELPERS
+  // ===============================
 
-  BoxDecoration _card({Color color = Colors.white}) {
-    return BoxDecoration(
-      color: color,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black12,
-          blurRadius: 8,
-          offset: const Offset(0, 4),
-        ),
-      ],
-    );
-  }
+  List<BoxShadow> _shadow() => [
+    BoxShadow(
+      color: Colors.black.withOpacity(.08),
+      blurRadius: 12,
+      offset: const Offset(0, 4),
+    ),
+  ];
 
-  Widget _bullet(String label, String? value) {
-    if (value == null || value.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Text(
-        "• $label: $value",
-        style: const TextStyle(fontSize: 13, color: Colors.black87),
-      ),
-    );
-  }
-
-  Widget _pill(String title, String value, Color bg, Color textColor) {
+  Widget _infoCard({required Widget child, Color background = Colors.white}) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(40),
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: _shadow(),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _badgeCard({
+    required String title,
+    required String value,
+    required Color color,
+    required Color textColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         children: [
           Text(
             title,
-            style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.7)),
+            style: TextStyle(fontSize: 12, color: textColor.withOpacity(.7)),
           ),
           Text(
             value,
@@ -323,6 +339,19 @@ class ResultPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _detail(String label, String? value) {
+    if (value == null || value == "—") {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        "• $label: $value",
+        style: const TextStyle(fontSize: 13, color: Colors.black87),
       ),
     );
   }

@@ -1,8 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+
+// your API and Disease database
 import 'package:kucognition_app/data/api_service.dart';
-import 'result_page.dart';
+import 'package:kucognition_app/data/disease_data.dart';
+
+import 'package:kucognition_app/screens/result_page.dart';
 
 class ScanPage extends StatefulWidget {
   const ScanPage({super.key});
@@ -16,27 +20,33 @@ class _ScanPageState extends State<ScanPage> {
   XFile? _capturedImage;
   bool _loading = false;
 
-  /// Only for camera capture
+  // =====================================================================
+  // 📸 Capture from Camera
+  // =====================================================================
   Future<void> _captureImage() async {
     try {
       final image = await _picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 85,
       );
-
       if (image == null) return;
 
       setState(() => _capturedImage = image);
+
       _runPrediction(File(image.path));
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Camera error: $e")));
+      ).showSnackBar(SnackBar(content: Text("Camera Error: $e")));
     }
   }
 
+  // =====================================================================
+  // 🔥 Call Backend API
+  // =====================================================================
   Future<void> _runPrediction(File file) async {
     if (_loading) return;
+
     setState(() => _loading = true);
 
     try {
@@ -49,13 +59,42 @@ class _ScanPageState extends State<ScanPage> {
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Prediction failed: $e")));
+      ).showSnackBar(SnackBar(content: Text("Prediction Failed: $e")));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  // =====================================================================
+  // 🛑 Popup window after prediction
+  // =====================================================================
   void _showResultPopup({required String label, required double confidence}) {
+    final normalizedLabel = label.toLowerCase().trim();
+
+    // Attempt exact key match OR case-insensitive match
+    final diseaseInfoEntry =
+        diseaseDatabase[label] ??
+        diseaseDatabase.entries
+            .firstWhere(
+              (e) => e.key.toLowerCase() == normalizedLabel,
+              orElse: () => MapEntry(
+                "Unknown",
+                DiseaseInfo(
+                  name: label,
+                  description:
+                      "No detailed information is available for this nail condition.",
+                  signs: [],
+                  image: "",
+                ),
+              ),
+            )
+            .value;
+
+    bool isHealthy = normalizedLabel.contains("healthy");
+
+    final headerColor = isHealthy ? Colors.green : Colors.red;
+    final headerText = isHealthy ? "HEALTHY RESULT" : "ACTION REQUIRED!";
+
     showDialog(
       barrierDismissible: false,
       context: context,
@@ -64,47 +103,76 @@ class _ScanPageState extends State<ScanPage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
+          titlePadding: const EdgeInsets.only(top: 15, bottom: 4),
+          contentPadding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+          actionsPadding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+
           title: Column(
             children: [
               const Text(
                 "SCAN COMPLETED",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                "ACTION REQUIRED!",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.red,
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Prediction:",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 4),
               Text(
-                label,
-                style: const TextStyle(
+                headerText,
+                style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF001372),
+                  fontWeight: FontWeight.w900,
+                  color: headerColor,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "Confidence: ${(confidence * 100).toStringAsFixed(1)}%",
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
               ),
             ],
           ),
-          actionsPadding: const EdgeInsets.all(12),
+
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 6),
+
+                const Text(
+                  "Prediction:",
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 3),
+
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    color: Color(0xFF001372),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                Text(
+                  "Confidence: ${(confidence * 100).toStringAsFixed(1)}%",
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+                const SizedBox(height: 12),
+
+                // 🔹 Short disease explanation
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFE5F1FF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    diseaseInfoEntry.description,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.4,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.justify,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           actions: [
             SizedBox(
               height: 44,
@@ -128,8 +196,14 @@ class _ScanPageState extends State<ScanPage> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF3B87D2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-                child: const Text("View full results here"),
+                child: const Text(
+                  "View full results here",
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ],
@@ -138,106 +212,188 @@ class _ScanPageState extends State<ScanPage> {
     );
   }
 
+  // =====================================================================
+  // ⭐ MAIN UI
+  // =====================================================================
   @override
   Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: const Color(0xFFEAF5FD),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            const SizedBox(height: 20),
-
-            const Text(
-              "Scan Your Nails",
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-            ),
-
-            const SizedBox(height: 6),
-            const Text(
-              "Take a clear and well-lit photo of your nails",
-              style: TextStyle(color: Colors.black54),
-            ),
-
-            const SizedBox(height: 22),
-
-            Container(
-              width: 300,
-              height: 340,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF5A4EDB), width: 3),
-                color: Colors.white,
+            // ——————— EXIT TO DASHBOARD
+            Positioned(
+              top: 6,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, size: 26),
+                onPressed: () => Navigator.pushNamed(context, '/dashboard'),
               ),
-              child: _capturedImage == null
-                  ? const Center(
-                      child: Text(
-                        "No image captured",
-                        style: TextStyle(color: Colors.black38),
-                      ),
-                    )
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: Image.file(
-                        File(_capturedImage!.path),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
             ),
 
-            const Spacer(),
-
-            if (_loading)
-              const Padding(
-                padding: EdgeInsets.all(8),
-                child: CircularProgressIndicator(),
-              ),
-
-            const SizedBox(height: 10),
-
-            // Buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Column(
               children: [
-                // 🔵 Upload image → Go to UploadedPage
-                SizedBox(
-                  width: 130,
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.photo_library),
-                    label: const Text("Upload"),
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/uploaded');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B87D2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 20),
+                const SizedBox(height: 28),
 
-                // 📸 Camera → Take picture & Auto-Analyze
-                SizedBox(
-                  width: 130,
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text("Camera"),
-                    onPressed: _captureImage,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B87D2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                // ————————— TITLE
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Scan your Nail",
+                      style: TextStyle(
+                        color: Color(0xFF001372),
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Image.asset("assets/images/logo.png", height: 26),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  "Align your nail within the frame",
+                  style: TextStyle(fontSize: 13, color: Colors.black54),
+                ),
+
+                const SizedBox(height: 28),
+
+                // ————————— SCAN FRAME
+                Container(
+                  width: w * 0.80,
+                  height: w * 1.0,
+                  decoration: BoxDecoration(
+                    color: Color(0xFFF4F6FA),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: Color(0xFF3B87D2), width: 3),
+                  ),
+                  child: _capturedImage == null
+                      ? const SizedBox()
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.file(
+                            File(_capturedImage!.path),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // ————————— Upload button
+                GestureDetector(
+                  onTap: () => Navigator.pushNamed(context, '/upload'),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: Color(0xFF3B87D2), width: 1.2),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Upload Image",
+                          style: TextStyle(
+                            color: Color(0xFF001372),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(width: 6),
+                        Icon(Icons.upload, color: Color(0xFF001372), size: 18),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // ————————— CAMERA SCAN BUTTON
+                GestureDetector(
+                  onTap: _loading ? null : _captureImage,
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(width: 3, color: Color(0xFF3B87D2)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [Color(0xFFBFD9FF), Color(0xFF8EC4FF)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
+
+                const Spacer(),
               ],
             ),
 
-            const SizedBox(height: 26),
+            // ————————— LEARN MORE FOOTER
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: GestureDetector(
+                onTap: () => Navigator.pushNamed(context, '/learnmore'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
+                  color: Colors.black.withOpacity(.85),
+                  child: Row(
+                    children: [
+                      Image.asset(
+                        "assets/images/learnmore_icon.png",
+                        width: 18,
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          "Explore nail health indicators and their meanings.",
+                          style: TextStyle(fontSize: 13, color: Colors.white70),
+                        ),
+                      ),
+                      const Text(
+                        "Learn more",
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.lightBlueAccent,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

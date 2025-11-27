@@ -28,3 +28,16 @@ flutter:
 
   assets:
     - assets/images/logo.png
+    - assets/images/learnmore_icon.png
+    - assets/images/beausline.jpg
+    - assets/images/clubbing.jpg
+    - assets/images/cyanosis.jpg
+    - assets/images/koilonychia.jpg
+    - assets/images/healthy.jpg
+    - assets/images/melanoma.jpg
+    - assets/images/onychogryphosis.jpg
+    - assets/images/onychomycosis.jpg
+    - assets/images/pitting.jpg
+    - assets/images/psoriasis.jpg
+    - assets/images/whitenail.jpg
+    - assets/images/yellownail.jpg
