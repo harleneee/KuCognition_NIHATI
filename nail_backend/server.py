@@ -28,10 +28,10 @@ class_names = [
 
 num_classes = len(class_names)
 
-# Unknown-detection tuning
-THRESHOLD = 0.80     # minimum confidence to accept a class
-MARGIN = 0.15        # top1 - top2 must be at least this
-TEMPERATURE = 2.0    # >1.0 makes softmax less overconfident
+# 🔧 Unknown-detection tuning (RELAXED so Healthy doesn't become Unknown)
+THRESHOLD = 0.30     # minimum confidence to accept a class (was 0.80)
+MARGIN = 0.12        # top1 - top2 must be at least this (was 0.15)
+TEMPERATURE = 1.0    # 1.0 = no extra smoothing (was 2.0)
 
 # same transform as training / testing
 transform = transforms.Compose([
@@ -89,7 +89,7 @@ def predict_image(pil_img: Image.Image) -> Tuple[str, float]:
     or 'Unknown / Not in trained classes'.
 
     Uses:
-      - temperature scaling
+      - optional temperature scaling
       - confidence threshold
       - top1 vs top2 margin
     """
@@ -98,7 +98,7 @@ def predict_image(pil_img: Image.Image) -> Tuple[str, float]:
     with torch.no_grad():
         outputs = model(img_t)
 
-        # 🔥 Temperature scaling: smooth the logits
+        # Temperature scaling (here TEMPERATURE = 1.0 → no effect)
         scaled_logits = outputs / TEMPERATURE
         probs = F.softmax(scaled_logits, dim=1)
 
@@ -109,9 +109,13 @@ def predict_image(pil_img: Image.Image) -> Tuple[str, float]:
         idx1 = int(top2_idx[0, 0].item())
 
     # ---------- UNKNOWN DECISION ----------
-    # 1) low confidence overall
-    # 2) or best and second-best are too close → ambiguous
-    if (conf1 < THRESHOLD) or ((conf1 - conf2) < MARGIN):
+    # Unknown if:
+    # 1) overall confidence very low, OR
+    # 2) top1 and top2 are too close → ambiguous
+    is_low_conf = conf1 < THRESHOLD
+    is_ambiguous = (conf1 - conf2) < MARGIN
+
+    if is_low_conf or is_ambiguous:
         return "Unknown / Not in trained classes", conf1
 
     # otherwise, accept the best class

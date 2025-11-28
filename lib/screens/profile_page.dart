@@ -154,6 +154,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
               _logoutButton(),
             ] else ...[
+              // This else block won't really be hit anymore once we always
+              // navigate to /history, but it's safe to leave it for now.
               const SizedBox(height: 40),
               Container(
                 width: double.infinity,
@@ -222,7 +224,10 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(width: 4),
           GestureDetector(
-            onTap: () => setState(() => isAboutSelected = false),
+            // 🔹 Instead of toggling the state, go to the dedicated HistoryPage
+            onTap: () {
+              Navigator.pushNamed(context, '/history');
+            },
             child: _tabChip("HISTORY", isActive: !isAboutSelected),
           ),
         ],
