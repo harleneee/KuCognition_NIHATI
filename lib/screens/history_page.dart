@@ -97,7 +97,10 @@ class HistoryPage extends StatelessWidget {
                           final String? risk = data['risk'] as String?;
                           final String? imageUrl = data['imageUrl'] as String?;
 
-                          final ts = data['timestamp'] as Timestamp?;
+                          final dynamic tsRaw = data['timestamp'];
+                          final Timestamp? ts =
+                              tsRaw is Timestamp ? tsRaw : null;
+
                           final String dateText = ts == null
                               ? ''
                               : DateFormat('MMMM d, yyyy')
@@ -115,13 +118,20 @@ class HistoryPage extends StatelessWidget {
                             confidence: confidence,
                             imageUrl: imageUrl,
                             onViewMore: () {
-                              // TODO: hook this to full results page later
-                              // Navigator.pushNamed(context, '/result_page', arguments: {...});
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Full results screen is not yet implemented.'),
-                                ),
+                              // ✅ Go to full ResultPage, now also passing imageUrl
+                              Navigator.pushNamed(
+                                context,
+                                '/result_page',
+                                arguments: {
+                                  // no local file path when opening from history
+                                  'imagePath': null,
+                                  // 🔹 network image url from Supabase
+                                  'imageUrl': imageUrl,
+                                  // condition + metadata
+                                  'conditionKey': conditionKey,
+                                  'predictionLabel': predictionLabel,
+                                  'confidence': confidence,
+                                },
                               );
                             },
                           );
@@ -244,7 +254,7 @@ class _HistoryCard extends StatelessWidget {
                   width: 80,
                   height: 90,
                   color: const Color(0xFFBFB5FF),
-                  child: imageUrl != null
+                  child: (imageUrl != null && imageUrl!.isNotEmpty)
                       ? Image.network(
                           imageUrl!,
                           fit: BoxFit.cover,

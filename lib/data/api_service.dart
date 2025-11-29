@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   // 👇 THIS is where the backend URL lives
-  static const String apiUrl = "http://10.121.226.154:8000/predict";
+  static const String apiUrl = "http://10.0.2.2:8000/predict";
 
   static Future<Map<String, dynamic>> predictNailDisease(File imageFile) async {
     var request = http.MultipartRequest("POST", Uri.parse(apiUrl));

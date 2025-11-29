@@ -120,33 +120,24 @@ class UploadedResult extends StatelessWidget {
     String? rawLabelFromModel;
     double? modelConfidence; // 0–1 from backend
 
-    // 🔹 Read arguments passed from UploadedPage
+    // 🔹 Read arguments passed from UploadPage
     if (args is String) {
-      // old style: only imagePath string
       imagePath = args;
     } else if (args is Map) {
       imagePath = args['imagePath'] as String?;
       final dynamic labelArg = args['label'];
       final dynamic confArg = args['confidence'];
 
-      if (labelArg is String) {
-        rawLabelFromModel = labelArg;
-      }
-
-      if (confArg is num) {
-        modelConfidence = confArg.toDouble();
-      } else if (confArg is String) {
-        // just in case backend returns as string
-        modelConfidence = double.tryParse(confArg);
-      }
+      if (labelArg is String) rawLabelFromModel = labelArg;
+      if (confArg is num) modelConfidence = confArg.toDouble();
+      if (confArg is String) modelConfidence = double.tryParse(confArg);
     }
 
-    // 🔹 Decide which disease key to use
+    // 🔹 Decide final prediction key
     if (rawLabelFromModel != null) {
       if (diseaseInfo.containsKey(rawLabelFromModel)) {
         predictionKey = rawLabelFromModel!;
       } else {
-        // label came from model but not in our five classes
         predictionKey = 'Unknown / Not in trained classes';
       }
     }
@@ -160,7 +151,7 @@ class UploadedResult extends StatelessWidget {
     final String description = info['description'] ?? '';
     final String risk = info['risk'] ?? '—';
 
-    // 🔹 Confidence text: use model value if available, else fallback from map
+    // 🔹 Confidence text: model value if available, else fallback
     String confidenceText;
     if (modelConfidence != null) {
       confidenceText = '${(modelConfidence * 100).toStringAsFixed(1)}%';
@@ -198,7 +189,6 @@ class UploadedResult extends StatelessWidget {
           children: [
             const SizedBox(height: 8),
 
-            // "Uploaded" label + filename box
             const Text(
               'Uploaded',
               style: TextStyle(
@@ -209,8 +199,7 @@ class UploadedResult extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(4),
@@ -293,7 +282,6 @@ class UploadedResult extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  // Prediction line
                   Text(
                     'Prediction: $displayName',
                     textAlign: TextAlign.center,
@@ -304,10 +292,7 @@ class UploadedResult extends StatelessWidget {
                       color: Colors.black,
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
-                  // Features
                   if (color != null || texture != null || shape != null)
                     Text(
                       [
@@ -322,10 +307,7 @@ class UploadedResult extends StatelessWidget {
                         color: Colors.black87,
                       ),
                     ),
-
                   const SizedBox(height: 12),
-
-                  // Confidence & risk row
                   Row(
                     children: [
                       Expanded(
@@ -407,7 +389,7 @@ class UploadedResult extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // View full results button (stub)
+            // ✅ View full results → ONLY navigate to ResultPage
             SizedBox(
               height: 44,
               child: ElevatedButton(
@@ -419,7 +401,15 @@ class UploadedResult extends StatelessWidget {
                   elevation: 3,
                 ),
                 onPressed: () {
-                  // To be wired later to a detailed report screen
+                  Navigator.pushNamed(
+                    context,
+                    '/result_page',
+                    arguments: {
+                      'imagePath': imagePath,
+                      'label': predictionKey,
+                      'confidence': modelConfidence,
+                    },
+                  );
                 },
                 child: const Text(
                   'View full results here',

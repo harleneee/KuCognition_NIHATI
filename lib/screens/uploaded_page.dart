@@ -3,6 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:kucognition_app/data/api_service.dart';
 
+// 🔹 Firebase for auth + Firestore
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+// 🔹 Supabase for image storage
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class UploadedPage extends StatefulWidget {
   const UploadedPage({super.key});
@@ -15,6 +21,25 @@ class _UploadedPageState extends State<UploadedPage> {
   final ImagePicker _picker = ImagePicker();
   XFile? _selectedImage;
   bool _isAnalyzing = false;
+
+  // 🔹 Risk mapping based on your spec
+  String _mapRisk(String predictionLabel) {
+    switch (predictionLabel) {
+      case 'Acral Lentiginous Melanoma':
+        return 'High';
+      case 'Healthy Nail':
+        return 'Low';
+      case 'Clubbing':
+      case 'Onychogryphosis':
+      case 'Pitting':
+        return 'Moderate';
+      case 'Unknown / Not in trained classes':
+        return 'Unknown';
+      default:
+        // Any label not in trained classes → Unknown
+        return 'Unknown';
+    }
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -37,7 +62,40 @@ class _UploadedPageState extends State<UploadedPage> {
     }
   }
 
-  // 🔵 UPDATED: now calls backend and sends result to uploaded_result page
+  /// 🔹 Upload to Supabase `history` bucket and return **public URL**.
+  Future<String?> _uploadToSupabase(String filePath) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+
+      final bytes = await File(filePath).readAsBytes();
+      final fileName = filePath.split(Platform.pathSeparator).last;
+
+      final String storageFileName =
+          '${user.uid}/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+
+      await supabase.storage.from('history').uploadBinary(
+            storageFileName,
+            bytes,
+            fileOptions: const FileOptions(
+              upsert: false,
+              contentType: 'image/jpeg',
+            ),
+          );
+
+      final publicUrl =
+          supabase.storage.from('history').getPublicUrl(storageFileName);
+
+      debugPrint('✅ Supabase upload success. URL: $publicUrl');
+      return publicUrl;
+    } catch (e) {
+      debugPrint('❌ Supabase upload error: $e');
+      return null;
+    }
+  }
+
+  // 🔵 Calls backend, uploads to Supabase, saves history to Firestore, then goes to UploadedResult
   Future<void> _analyzeImage() async {
     if (_selectedImage == null || _isAnalyzing) return;
 
@@ -45,32 +103,94 @@ class _UploadedPageState extends State<UploadedPage> {
       _isAnalyzing = true;
     });
 
+    String predictionLabel = 'Unknown / Not in trained classes';
+    double? confidence;
+    String risk = 'Unknown';
+    String? imageUrl;
+
     try {
-      // Call backend API with the selected image
+      // 1️⃣ Call backend API with the selected image
       final result = await ApiService.predictNailDisease(
         File(_selectedImage!.path),
       );
 
-      // Navigate to result screen with image + prediction data
+      // 2️⃣ Normalize label & confidence from backend result
+      final dynamic rawLabel = result['label'];
+      final dynamic rawConfidence = result['confidence'];
+
+      if (rawLabel is String && rawLabel.trim().isNotEmpty) {
+        predictionLabel = rawLabel;
+      }
+
+      if (rawConfidence is num) {
+        confidence = rawConfidence.toDouble();
+      } else if (rawConfidence is String) {
+        confidence = double.tryParse(rawConfidence);
+      }
+
+      risk = _mapRisk(predictionLabel);
+
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        // 3️⃣ Upload to Supabase Storage
+        imageUrl = await _uploadToSupabase(_selectedImage!.path);
+
+        // 4️⃣ Save scan to Firestore history (even if imageUrl is null, still save)
+        try {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('history')
+              .add({
+            'predictionLabel': predictionLabel, // human-readable label
+            'conditionKey': predictionLabel, // using same label as key
+            'confidence': confidence, // 0–1 double (nullable)
+            'risk': risk, // High/Moderate/Low/Unknown
+            'imageUrl': imageUrl, // Supabase public URL or null
+            'imagePath': null, // local path not needed in history
+            'source': 'upload', // "upload" vs "scan"
+            'timestamp': Timestamp.now(), // ✅ match ScanPage style
+          });
+
+          debugPrint('✅ History saved for upload scan.');
+        } catch (e) {
+          debugPrint('❌ Error saving upload history to Firestore: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Scan result could not be saved to history, but you can still view the analysis.',
+              ),
+            ),
+          );
+        }
+      } else {
+        debugPrint('ℹ️ No user logged in, skipping history save.');
+      }
+    } catch (e) {
+      debugPrint('❌ Error during analyze/upload/save: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error analyzing image: $e')),
+      );
+    } finally {
+      if (!mounted) return;
+
+      // ✅ Always go to UploadedResult, even if history save fails
       Navigator.pushNamed(
         context,
         '/uploaded_result',
         arguments: {
           'imagePath': _selectedImage!.path,
-          'label': result['label'],
-          'confidence': result['confidence'],
+          'label': predictionLabel,
+          'confidence': confidence,
+          'risk': risk,
+          'imageUrl': imageUrl,
         },
       );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error analyzing image: $e')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isAnalyzing = false;
-        });
-      }
+
+      setState(() {
+        _isAnalyzing = false;
+      });
     }
   }
 
@@ -101,19 +221,16 @@ class _UploadedPageState extends State<UploadedPage> {
       );
 
       if (shouldDiscard == true) {
-        // clear the selected image
         setState(() {
           _selectedImage = null;
         });
 
-        // then go back
         Navigator.of(context).maybePop();
       }
 
-      return; // stop here so it doesn’t fall through
+      return;
     }
 
-    // no image selected → just go back
     Navigator.of(context).maybePop();
   }
 
@@ -152,7 +269,7 @@ class _UploadedPageState extends State<UploadedPage> {
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
-                      vertical: 24, // slightly less vertical padding
+                      vertical: 24,
                     ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8F7FF),
@@ -195,7 +312,6 @@ class _UploadedPageState extends State<UploadedPage> {
                         : Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // 🟦 Image preview with max height so it never overflows
                               Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
@@ -208,7 +324,6 @@ class _UploadedPageState extends State<UploadedPage> {
                                   borderRadius: BorderRadius.circular(8),
                                   child: SizedBox(
                                     width: double.infinity,
-                                    // <- cap the height to avoid overflow
                                     height: 260,
                                     child: Image.file(
                                       File(_selectedImage!.path),

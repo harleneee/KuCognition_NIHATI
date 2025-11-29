@@ -2,10 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-// your API and Disease database
+// ⭐ history needs auth + firestore + storage
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+
 import 'package:kucognition_app/data/api_service.dart';
 import 'package:kucognition_app/data/disease_data.dart';
-
 import 'package:kucognition_app/screens/result_page.dart';
 
 class ScanPage extends StatefulWidget {
@@ -42,7 +45,7 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   // =====================================================================
-  // 🔥 Call Backend API
+  // 🔥 Call Backend API + UPLOAD IMAGE + SAVE TO HISTORY
   // =====================================================================
   Future<void> _runPrediction(File file) async {
     if (_loading) return;
@@ -52,9 +55,25 @@ class _ScanPageState extends State<ScanPage> {
     try {
       final result = await ApiService.predictNailDisease(file);
 
+      // ⭐ make sure types are clean
+      final String label = result['label'] as String;
+      final double confidence =
+          (result['confidence'] as num).toDouble(); // handles int/double
+
+      // 1) Try to upload image to Firebase Storage (if user logged in)
+      final String? imageUrl = await _uploadImageToStorage(file);
+
+      // 2) Save this scan to Firestore history
+      await _saveScanToHistory(
+        label: label,
+        confidence: confidence,
+        imageUrl: imageUrl,
+      );
+
+      // 3) Show popup + go to ResultPage
       _showResultPopup(
-        label: result['label'],
-        confidence: result['confidence'],
+        label: label,
+        confidence: confidence,
       );
     } catch (e) {
       ScaffoldMessenger.of(
@@ -66,12 +85,84 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   // =====================================================================
+  // ⭐ Upload image to Firebase Storage
+  // =====================================================================
+  Future<String?> _uploadImageToStorage(File file) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // not logged in -> skip uploading, history will also skip image
+      return null;
+    }
+
+    try {
+      final storageRef = FirebaseStorage.instance.ref().child(
+          'user_scans/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+      final uploadTask = storageRef.putFile(file);
+      final snapshot = await uploadTask.whenComplete(() {});
+
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      debugPrint('Error uploading image to storage: $e');
+      return null; // fallback: history will store null imageUrl
+    }
+  }
+
+  // =====================================================================
+  // ⭐ helper to map label -> risk (for history card)
+  // =====================================================================
+  String _riskForLabel(String label) {
+    switch (label) {
+      case 'Acral Lentiginous Melanoma':
+        return 'High';
+      case 'Healthy Nail':
+        return 'Low';
+      case 'Clubbing':
+      case 'Onychogryphosis':
+      case 'Pitting':
+        return 'Moderate';
+      case 'Unknown / Not in trained classes':
+        return 'Unknown';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  // =====================================================================
+  // ⭐ Write to Firestore history
+  // =====================================================================
+  Future<void> _saveScanToHistory({
+    required String label,
+    required double confidence,
+    required String? imageUrl,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return; // no logged in user, skip
+
+    final String risk = _riskForLabel(label);
+
+    final historyRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('history');
+
+    await historyRef.add({
+      'predictionLabel': label,
+      'conditionKey': label, // same string for now
+      'confidence': confidence,
+      'risk': risk,
+      'imageUrl': imageUrl,   // ✅ Storage URL (or null if upload failed)
+      'timestamp': Timestamp.now(),
+    });
+  }
+
+  // =====================================================================
   // 🛑 Popup window after prediction
   // =====================================================================
   void _showResultPopup({required String label, required double confidence}) {
     final normalizedLabel = label.toLowerCase().trim();
 
-    // Attempt exact key match OR case-insensitive match
     final diseaseInfoEntry =
         diseaseDatabase[label] ??
         diseaseDatabase.entries
@@ -152,11 +243,11 @@ class _ScanPageState extends State<ScanPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // 🔹 Short disease explanation
+                // short explanation
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Color(0xFFE5F1FF),
+                    color: const Color(0xFFE5F1FF),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -224,7 +315,7 @@ class _ScanPageState extends State<ScanPage> {
       body: SafeArea(
         child: Stack(
           children: [
-            // ——————— EXIT TO DASHBOARD
+            // EXIT TO DASHBOARD
             Positioned(
               top: 6,
               right: 10,
@@ -238,7 +329,7 @@ class _ScanPageState extends State<ScanPage> {
               children: [
                 const SizedBox(height: 28),
 
-                // ————————— TITLE
+                // TITLE
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -262,14 +353,14 @@ class _ScanPageState extends State<ScanPage> {
 
                 const SizedBox(height: 28),
 
-                // ————————— SCAN FRAME
+                // SCAN FRAME
                 Container(
                   width: w * 0.80,
                   height: w * 1.0,
                   decoration: BoxDecoration(
-                    color: Color(0xFFF4F6FA),
+                    color: const Color(0xFFF4F6FA),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Color(0xFF3B87D2), width: 3),
+                    border: Border.all(color: const Color(0xFF3B87D2), width: 3),
                   ),
                   child: _capturedImage == null
                       ? const SizedBox()
@@ -284,7 +375,7 @@ class _ScanPageState extends State<ScanPage> {
 
                 const SizedBox(height: 20),
 
-                // ————————— Upload button
+                // Upload button
                 GestureDetector(
                   onTap: () => Navigator.pushNamed(context, '/upload'),
                   child: Container(
@@ -294,7 +385,8 @@ class _ScanPageState extends State<ScanPage> {
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      border: Border.all(color: Color(0xFF3B87D2), width: 1.2),
+                      border:
+                          Border.all(color: const Color(0xFF3B87D2), width: 1.2),
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: const Row(
@@ -308,7 +400,8 @@ class _ScanPageState extends State<ScanPage> {
                           ),
                         ),
                         SizedBox(width: 6),
-                        Icon(Icons.upload, color: Color(0xFF001372), size: 18),
+                        Icon(Icons.upload,
+                            color: Color(0xFF001372), size: 18),
                       ],
                     ),
                   ),
@@ -316,7 +409,7 @@ class _ScanPageState extends State<ScanPage> {
 
                 const SizedBox(height: 32),
 
-                // ————————— CAMERA SCAN BUTTON
+                // CAMERA SCAN BUTTON
                 GestureDetector(
                   onTap: _loading ? null : _captureImage,
                   child: Container(
@@ -325,8 +418,9 @@ class _ScanPageState extends State<ScanPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(width: 3, color: Color(0xFF3B87D2)),
-                      boxShadow: [
+                      border:
+                          Border.all(width: 3, color: const Color(0xFF3B87D2)),
+                      boxShadow: const [
                         BoxShadow(
                           color: Colors.black12,
                           blurRadius: 6,
@@ -338,7 +432,7 @@ class _ScanPageState extends State<ScanPage> {
                       child: Container(
                         width: 46,
                         height: 46,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: LinearGradient(
                             colors: [Color(0xFFBFD9FF), Color(0xFF8EC4FF)],
@@ -355,7 +449,7 @@ class _ScanPageState extends State<ScanPage> {
               ],
             ),
 
-            // ————————— LEARN MORE FOOTER
+            // LEARN MORE FOOTER
             Positioned(
               left: 0,
               right: 0,
@@ -378,7 +472,8 @@ class _ScanPageState extends State<ScanPage> {
                       const Expanded(
                         child: Text(
                           "Explore nail health indicators and their meanings.",
-                          style: TextStyle(fontSize: 13, color: Colors.white70),
+                          style:
+                              TextStyle(fontSize: 13, color: Colors.white70),
                         ),
                       ),
                       const Text(

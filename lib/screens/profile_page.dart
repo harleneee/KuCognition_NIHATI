@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -31,42 +32,93 @@ class _ProfilePageState extends State<ProfilePage> {
         return;
       }
 
+      // 1) Basic user document
       final snap = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .get();
 
+      String fullName = user.email ?? "User";
+      String email = user.email ?? "";
+      String sex = "Not set";
+      String birthday = "Not set";
+      String profileImageUrl = "";
+
       if (snap.exists) {
         final data = snap.data()!;
-        setState(() {
-          userData = {
-            "fullName": data["fullName"] ?? "No name",
-            "email": data["email"] ?? user.email ?? "",
-            "sex": data["sex"] ?? "Not set",
-            "birthday": data["birthday"] ?? "Not set",
-            "profileImageUrl": data["profileImageUrl"] ?? "",
-            "totalScans": data["totalScans"] ?? 0,
-            "mostCommonResult": data["mostCommonResult"] ?? "None yet",
-            "lastScan": data["lastScan"] ?? "No scans yet",
-          };
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          userData = {
-            "fullName": user.email ?? "User",
-            "email": user.email ?? "",
-            "sex": "Not set",
-            "birthday": "Not set",
-            "profileImageUrl": "",
-            "totalScans": 0,
-            "mostCommonResult": "None yet",
-            "lastScan": "No scans yet",
-          };
-          isLoading = false;
-        });
+        fullName = data["fullName"] ?? fullName;
+        email = data["email"] ?? email;
+        sex = data["sex"] ?? "Not set";
+        birthday = data["birthday"] ?? "Not set";
+        profileImageUrl = data["profileImageUrl"] ?? "";
       }
+
+      // 2) Stats from history collection
+      final historySnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('history')
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      int totalScans = historySnap.docs.length;
+      String mostCommonResult = "None yet";
+      String lastScan = "No scans yet";
+
+      if (historySnap.docs.isNotEmpty) {
+        // last scan = most recent doc
+        final lastDoc =
+            historySnap.docs.first.data() as Map<String, dynamic>? ?? {};
+        final String lastLabel =
+            (lastDoc['predictionLabel'] as String?) ?? 'Unknown condition';
+        final tsRaw = lastDoc['timestamp'];
+        String datePart = "";
+
+        if (tsRaw is Timestamp) {
+          final dt = tsRaw.toDate();
+          datePart = DateFormat('MMMM d, yyyy').format(dt).toUpperCase();
+        }
+
+        lastScan = datePart.isNotEmpty ? "$lastLabel • $datePart" : lastLabel;
+
+        // compute most common predictionLabel
+        final Map<String, int> counts = {};
+        for (final d in historySnap.docs) {
+          final m = d.data() as Map<String, dynamic>? ?? {};
+          final label =
+              (m['predictionLabel'] as String?) ?? 'Unknown condition';
+          counts[label] = (counts[label] ?? 0) + 1;
+        }
+
+        String bestLabel = "None yet";
+        int maxCount = 0;
+        counts.forEach((label, count) {
+          if (count > maxCount) {
+            maxCount = count;
+            bestLabel = label;
+          }
+        });
+
+        if (maxCount > 0) {
+          mostCommonResult = bestLabel;
+        }
+      }
+
+      setState(() {
+        userData = {
+          "fullName": fullName,
+          "email": email,
+          "sex": sex,
+          "birthday": birthday,
+          "profileImageUrl": profileImageUrl,
+          "totalScans": totalScans,
+          "mostCommonResult": mostCommonResult,
+          "lastScan": lastScan,
+        };
+        isLoading = false;
+      });
     } catch (e) {
+      debugPrint("Error loading profile data: $e");
       setState(() {
         userData = {};
         isLoading = false;
@@ -154,8 +206,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
               _logoutButton(),
             ] else ...[
-              // This else block won't really be hit anymore once we always
-              // navigate to /history, but it's safe to leave it for now.
               const SizedBox(height: 40),
               Container(
                 width: double.infinity,
@@ -224,7 +274,6 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(width: 4),
           GestureDetector(
-            // 🔹 Instead of toggling the state, go to the dedicated HistoryPage
             onTap: () {
               Navigator.pushNamed(context, '/history');
             },
