@@ -46,13 +46,16 @@ class NailHealthApp extends StatelessWidget {
       title: 'Nail Health Detection',
 
       // OPTION A → Use home: when testing a specific screen
+      
       home: const LoginPage(), // ← current start screen
       // home: UploadedPage(),
       // home: DashboardPage(),
       // home: ScanPage(),
 
       // OPTION B → Use your normal navigation
+      
       // initialRoute: '/start',
+
       routes: {
         '/start': (context) => StartPage(),
         '/login': (context) => const LoginPage(),

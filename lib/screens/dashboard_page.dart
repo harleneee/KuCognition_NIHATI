@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'scan_page.dart';
 import 'profile_page.dart';
+import 'chatbot_page.dart'; // 👈 NEW IMPORT
 
 void main() {
   runApp(const KuCognitionApp());
@@ -47,7 +48,7 @@ class KuCognitionApp extends StatelessWidget {
   }
 }
 
-// --- CHATBOT SCREEN ---
+// --- CHATBOT SCREEN (old placeholder, now unused but kept for reference) ---
 class ChatbotScreen extends StatelessWidget {
   final String initialPrompt;
   const ChatbotScreen({super.key, required this.initialPrompt});
@@ -128,8 +129,9 @@ class DashboardScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        const ChatbotScreen(initialPrompt: "Hello KuBot!"),
+                    builder: (context) => ChatbotPage(
+                      initialPrompt: "Hello KuBot!",
+                    ),
                   ),
                 );
               },
@@ -532,7 +534,7 @@ class DashboardScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ChatbotScreen(
+                        builder: (context) => ChatbotPage(
                           initialPrompt: topic['prompt'],
                         ),
                       ),
