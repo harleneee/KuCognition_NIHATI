@@ -14,7 +14,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final confirmPasswordController = TextEditingController();
 
   bool _passwordVisible = false;
-  bool _confirmPasswordVisible = false;
+  bool _confirmVisible = false;
 
   @override
   void dispose() {
@@ -25,12 +25,9 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
-  void showError(String message) {
+  void showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(msg), backgroundColor: Colors.red),
     );
   }
 
@@ -44,12 +41,12 @@ class _SignUpPageState extends State<SignUpPage> {
         email.isEmpty ||
         password.isEmpty ||
         confirmPassword.isEmpty) {
-      showError("Please fill out all fields.");
+      showError("Please fill all fields.");
       return;
     }
 
     if (!email.contains("@") || !email.contains(".")) {
-      showError("Please enter a valid email address.");
+      showError("Enter a valid email.");
       return;
     }
 
@@ -78,177 +75,297 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFEAF5FD),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 60),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-            const Text(
-              "Sign Up",
-              style: TextStyle(
-                color: Color(0xFF1F41BB),
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              "Step 1 of 2 • Create your account",
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              "You'll add your profile details on the next step.",
-              style: TextStyle(fontSize: 13),
-            ),
-            const SizedBox(height: 25),
+      body: Column(
+        children: [
+          // ----------------------------
+          // 20% BREATHING GRADIENT
+          // ----------------------------
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.20,
+            child: const BreathingGradient(),
+          ),
 
-            // Full name
-            _inputField("Full Name", fullNameController),
-            const SizedBox(height: 15),
-
-            // Email
-            _inputField(
-              "Email",
-              emailController,
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 15),
-
-            // Password
-            _inputField(
-              "Password",
-              passwordController,
-              obscure: !_passwordVisible,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _passwordVisible ? Icons.visibility_off : Icons.visibility,
-                  color: const Color(0xFF6D777F),
-                ),
-                onPressed: () {
-                  setState(() {
-                    _passwordVisible = !_passwordVisible;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(height: 15),
-
-            // Confirm password
-            _inputField(
-              "Confirm Password",
-              confirmPasswordController,
-              obscure: !_confirmPasswordVisible,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _confirmPasswordVisible
-                      ? Icons.visibility_off
-                      : Icons.visibility,
-                  color: const Color(0xFF6D777F),
-                ),
-                onPressed: () {
-                  setState(() {
-                    _confirmPasswordVisible = !_confirmPasswordVisible;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(height: 30),
-
-            SizedBox(
+          // ----------------------------
+          // 80% WHITE BUBBLE
+          // ----------------------------
+          Expanded(
+            child: Container(
               width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B87D2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(35)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.07),
+                    blurRadius: 25,
+                    spreadRadius: 8,
+                    offset: const Offset(0, -5),
                   ),
-                  elevation: 3,
-                ),
-                onPressed: _goToExtraPage,
-                child: const Text(
-                  "Next",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                ],
+              ),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 6),
+
+                  // LOGO
+                  Image.asset(
+                    "assets/images/logo.png",
+                    width: 65,
                   ),
-                ),
+
+                  const SizedBox(height: 15),
+
+                  const Text(
+                    "Sign Up",
+                    style: TextStyle(
+                      fontSize: 28,
+                      color: Color(0xFF1F41BB),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+                  const Text(
+                    "Step 1 of 2 • Create your account",
+                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+
+                  const SizedBox(height: 4),
+                  const Text(
+                    "You'll add your profile details on the next step.",
+                    style: TextStyle(fontSize: 13),
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  // FULL NAME
+                  _roundedField(
+                    controller: fullNameController,
+                    hint: "Full Name",
+                    icon: Icons.person_outline,
+                  ),
+                  const SizedBox(height: 18),
+
+                  // EMAIL
+                  _roundedField(
+                    controller: emailController,
+                    hint: "Email",
+                    icon: Icons.email_outlined,
+                  ),
+                  const SizedBox(height: 18),
+
+                  // PASSWORD
+                  _roundedField(
+                    controller: passwordController,
+                    hint: "Password",
+                    icon: Icons.lock_outline,
+                    obscure: !_passwordVisible,
+                    suffix: IconButton(
+                      icon: Icon(
+                        _passwordVisible
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.black54,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _passwordVisible = !_passwordVisible;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // CONFIRM PASSWORD
+                  _roundedField(
+                    controller: confirmPasswordController,
+                    hint: "Confirm Password",
+                    icon: Icons.lock_outline,
+                    obscure: !_confirmVisible,
+                    suffix: IconButton(
+                      icon: Icon(
+                        _confirmVisible
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.black54,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _confirmVisible = !_confirmVisible;
+                        });
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // NEXT BUTTON
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3B87D2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 3,
+                      ),
+                      onPressed: _goToExtraPage,
+                      child: const Text(
+                        "Next",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  GestureDetector(
+                    onTap: () =>
+                        Navigator.pushReplacementNamed(context, "/login"),
+                    child: const Text(
+                      "Already have an account? Login",
+                      style: TextStyle(
+                        color: Color(0xFF1F41BB),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-
-            const SizedBox(height: 20),
-
-            Center(
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.pushReplacementNamed(context, "/login");
-                },
-                child: const Text(
-                  "Already have an account? Login",
-                  style: TextStyle(
-                    color: Color(0xFF1F41BB),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _inputField(
-    String label,
-    TextEditingController controller, {
+  // -----------------------------------------------------
+  //   BEAUTIFUL INPUT BUBBLE (CENTERED PLACEHOLDER)
+  // -----------------------------------------------------
+  Widget _roundedField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
     bool obscure = false,
-    TextInputType keyboardType = TextInputType.text,
-    Widget? suffixIcon,
+    Widget? suffix,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+    return Container(
+      height: 55,
+      decoration: BoxDecoration(
+        color: const Color(0xFFD6E8FF),
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 3),
           ),
-        ),
-        const SizedBox(height: 5),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: const [
-              BoxShadow(
-                blurRadius: 4,
-                color: Colors.black12,
-                offset: Offset(0, 2),
-              ),
-            ],
+        ],
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 12),
+
+          // LEFT ICON
+          Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              color: Color(0xFFEAF5FD),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 20, color: Color(0xFF3B87D2)),
           ),
-          child: TextField(
-            controller: controller,
-            obscureText: obscure,
-            keyboardType: keyboardType,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 15,
-                vertical: 15,
+
+          const SizedBox(width: 12),
+
+          // TEXT FIELD
+          Expanded(
+            child: TextField(
+              controller: controller,
+              obscureText: obscure,
+              decoration: InputDecoration(
+                hintText: hint,
+                border: InputBorder.none,
               ),
-              border: InputBorder.none,
-              suffixIcon: suffixIcon,
             ),
           ),
-        ),
-      ],
+
+          if (suffix != null) suffix,
+          const SizedBox(width: 10),
+        ],
+      ),
     );
+  }
+}
+
+// ------------------------------------------------------
+// BREATHING GRADIENT (SAME EFFECT AS LOGIN)
+// ------------------------------------------------------
+class BreathingGradient extends StatefulWidget {
+  const BreathingGradient({super.key});
+
+  @override
+  State<BreathingGradient> createState() => _BreathingGradientState();
+}
+
+class _BreathingGradientState extends State<BreathingGradient>
+    with TickerProviderStateMixin {
+  late AnimationController _controller1;
+  late AnimationController _controller2;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller1 = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+
+    _controller2 = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_controller1, _controller2]),
+      builder: (_, __) {
+        final rate1 = 0.85 + (_controller1.value * 0.25);
+
+        return Container(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment.topCenter,
+              radius: rate1,
+              colors: const [
+                Color(0xFF3B87D2),
+                Color(0xFFEAF5FD),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller1.dispose();
+    _controller2.dispose();
+    super.dispose();
   }
 }
