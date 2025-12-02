@@ -61,8 +61,7 @@ class HistoryPage extends StatelessWidget {
                         );
                       }
 
-                      if (!snapshot.hasData ||
-                          snapshot.data!.docs.isEmpty) {
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                         return const Center(
                           child: Text(
                             'No scan history yet.',
@@ -357,7 +356,7 @@ class _HistoryCard extends StatelessWidget {
 }
 
 /// Short summaries used in the history cards.
-/// You can tweak this text anytime.
+/// Updated for all 8 classes.
 String _shortSummaryFor(String conditionKey, String? risk) {
   switch (conditionKey) {
     case 'Acral Lentiginous Melanoma':
@@ -370,6 +369,14 @@ String _shortSummaryFor(String conditionKey, String? risk) {
       return 'Thickened, curved nail that may cause discomfort or infection.';
     case 'Pitting':
       return 'Small dents on nail surface; may relate to inflammatory disease.';
+    case 'Beau’s Lines':
+      return 'Horizontal grooves across the nail; often a marker of past systemic stress.';
+    case 'Bluish Nail':
+      return 'Bluish or dusky nail bed; may signal reduced oxygen or circulation issues.';
+    case 'Koilonychia':
+      return 'Thin, spoon-shaped nails; often associated with iron deficiency or nutritional imbalance.';
+    case 'Unknown / Not in trained classes':
+      return 'Pattern does not match trained classes; consider retaking photo or seeking medical advice if concerned.';
     default:
       return risk == 'High'
           ? 'Significant nail changes detected; consider medical review.'

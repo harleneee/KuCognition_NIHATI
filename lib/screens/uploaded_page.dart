@@ -27,11 +27,15 @@ class _UploadedPageState extends State<UploadedPage> {
     switch (predictionLabel) {
       case 'Acral Lentiginous Melanoma':
         return 'High';
+      case 'Bluish Nail':
+        return 'High';
       case 'Healthy Nail':
         return 'Low';
       case 'Clubbing':
       case 'Onychogryphosis':
       case 'Pitting':
+      case 'Beau’s Lines':
+      case 'Koilonychia':
         return 'Moderate';
       case 'Unknown / Not in trained classes':
         return 'Unknown';

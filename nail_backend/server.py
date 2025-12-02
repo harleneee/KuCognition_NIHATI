@@ -17,11 +17,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 MODEL_PATH = "best_nail_classifier_model.pth"
 
-# Your 5 trained classes
+# Your trained classes (UPDATED: 8 classes)
 class_names = [
     "Acral Lentiginous Melanoma",
+    "Beau’s Lines",
+    "Bluish Nail",
     "Clubbing",
     "Healthy Nail",
+    "Koilonychia",
     "Onychogryphosis",
     "Pitting",
 ]
@@ -29,9 +32,9 @@ class_names = [
 num_classes = len(class_names)
 
 # 🔧 Unknown-detection tuning (RELAXED so Healthy doesn't become Unknown)
-THRESHOLD = 0.30     # minimum confidence to accept a class (was 0.80)
-MARGIN = 0.12        # top1 - top2 must be at least this (was 0.15)
-TEMPERATURE = 1.0    # 1.0 = no extra smoothing (was 2.0)
+THRESHOLD = 0.30     # minimum confidence to accept a class
+MARGIN = 0.12        # top1 - top2 must be at least this
+TEMPERATURE = 1.0    # 1.0 = no extra smoothing
 
 # same transform as training / testing
 transform = transforms.Compose([
@@ -85,7 +88,7 @@ app.add_middleware(
 
 def predict_image(pil_img: Image.Image) -> Tuple[str, float]:
     """
-    Returns (label, confidence) where label can be one of the 5 classes
+    Returns (label, confidence) where label can be one of the 8 classes
     or 'Unknown / Not in trained classes'.
 
     Uses:

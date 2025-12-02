@@ -128,6 +128,85 @@ class ResultPage extends StatelessWidget {
       'whyMatters':
           'Nail pitting often reflects disruptions in the nail matrix, which can be influenced by immune or inflammatory activity within the body. When pits repeatedly appear or spread, it may signal internal inflammation or autoimmune processes that need evaluation. Early attention is valuable because nail pitting can be a visible indicator of deeper systemic conditions that benefit from timely medical assessment and management.',
     },
+
+    // 🔹 NEW: Beau’s Lines
+    'Beau’s Lines': {
+      'displayName': 'Beau’s Lines',
+      'confidence': '87%',
+      'risk': 'Moderate',
+      'scannedColor':
+          'The nail generally keeps its usual pinkish or slightly pale tone, but one or more horizontal grooves can be seen crossing the width of the nail. When several nails are affected, the lines often sit at a similar level, suggesting they formed during the same period of disrupted nail growth.',
+      'scannedTexture':
+          'On touch, Beau’s lines feel like shallow ridges or dents that interrupt the smooth surface of the nail. The grooves may be fine or more pronounced and slowly move toward the tip as the nail grows, acting like a marker of a past event that temporarily slowed or paused nail production.',
+      'underlyingIntro':
+          'The presence of transverse grooves that appear on one or more nails, especially when they align at the same level, may indicate a temporary interruption of nail matrix growth associated with systemic stress episodes. These nail changes may correlate with:',
+      'underlyingMetabolic':
+          'Metabolic / circulatory: past episodes of high fever, severe infection, major surgery, shock, or significant dehydration that briefly diverted blood flow and nutrients away from nail formation.',
+      'underlyingImmune':
+          'Immune function: strong inflammatory or autoimmune flares that placed the body under intense stress, causing a short pause in normal cell activity and nail growth.',
+      'underlyingNutrient':
+          'Nutrient / endocrine: periods of poor nutrition, uncontrolled diabetes, thyroid imbalance, or other metabolic disturbances that interfered with the steady supply of energy and building blocks for healthy nail production.',
+      'underlyingOrgan':
+          'Organ health: serious or prolonged disease affecting vital organs such as the heart, lungs, liver, or kidneys, as well as intensive medical treatments or toxic exposures that can disrupt tissue renewal and leave visible marks in the nails.',
+      'nextSteps':
+          '• Professional nail and systemic evaluation: if Beau’s lines appear on several nails, are deep, or keep reappearing, consult a physician or dermatologist. The level and number of lines can help estimate when the body experienced stress.\n'
+          '• Internal health screening: discuss recent or past severe illness, fever, hospitalization, weight loss, unusual fatigue, or metabolic disorders. Blood tests may be advised to check for unresolved infections, metabolic imbalance, or organ dysfunction.',
+      'whyMatters':
+          'Beau’s lines themselves are not harmful, but they function as visible records of internal stress or illness that affected the body in the past. When such changes are widespread or frequently recurring, they may signal that the body is experiencing repeated or ongoing systemic strain. Recognizing this pattern supports earlier investigation of possible internal health problems so that underlying issues can be identified, managed, and prevented from leading to more serious complications.',
+    },
+
+    // 🔹 NEW: Bluish Nail
+    'Bluish Nail': {
+      'displayName': 'Bluish Nail',
+      'confidence': '87%',
+      'risk': 'High',
+      'scannedColor':
+          'The nail bed shows a bluish, purplish, or grayish discoloration, either across the entire nail or most prominently near the base. Compared to surrounding skin, the nail looks dusky or oxygen-poor rather than bright pink, and the color may deepen in cool environments.',
+      'scannedTexture':
+          'The nail plate usually remains smooth and structurally intact, with normal thickness and shape. The main abnormality is the altered color of the nail bed beneath the nail rather than changes in the nail surface itself.',
+      'underlyingIntro':
+          'The appearance of a persistent bluish or purplish nail bed, especially when not simply due to cold exposure, may indicate a peripheral oxygenation disturbance associated with cardiopulmonary or vascular changes. These nail changes may correlate with:',
+      'underlyingMetabolic':
+          'Metabolic / circulatory: reduced cardiac output, peripheral artery disease, blood vessel spasm, or other circulatory problems that limit oxygen-rich blood from reaching the fingertips.',
+      'underlyingImmune':
+          'Immune function: autoimmune or inflammatory diseases affecting blood vessels or the microcirculation that can lead to episodes of decreased blood flow and intermittent bluish discoloration.',
+      'underlyingNutrient':
+          'Nutrient / endocrine: long-standing anemia, severe nutritional deficiencies, or hormonal disturbances that weaken heart or lung performance and reduce overall oxygen delivery.',
+      'underlyingOrgan':
+          'Organ health: underlying heart or lung conditions such as chronic lung disease, congenital heart defects, heart failure, or pulmonary hypertension that cause persistently low oxygen levels, with bluish nails serving as an external sign.',
+      'nextSteps':
+          '• Cardiopulmonary and vascular evaluation: persistent or unexplained bluish nails should be discussed with a healthcare provider. Assessment of heart and lung function, oxygen saturation, and circulation can help determine whether systemic oxygenation problems are present.\n'
+          '• Internal health screening: report symptoms such as shortness of breath, chest pain, dizziness, fainting, or long-standing fatigue, as well as any known heart, lung, blood, or autoimmune disorders, so that targeted testing can be arranged.',
+      'whyMatters':
+          'Bluish nails are more than a cosmetic concern; they are a visible warning that oxygen delivery or circulation may not be adequate. While brief color changes from cold are often harmless, persistent or symptom-related bluish nails can indicate significant internal problems involving the heart, lungs, blood, or blood vessels. Detecting these signs and investigating them promptly allows for earlier diagnosis and intervention, which can protect vital organs and reduce the risk of serious complications.',
+    },
+
+    // 🔹 NEW: Koilonychia
+    'Koilonychia': {
+      'displayName': 'Koilonychia',
+      'confidence': '87%',
+      'risk': 'Moderate',
+      'scannedColor':
+          'The nail often appears pale, dull, or slightly whitish, especially in the central area, and may lose some of its normal healthy pink hue. The surrounding skin may look normal or somewhat dry depending on overall condition and care.',
+      'scannedTexture':
+          'Koilonychia is characterized by a thin, soft, and sometimes brittle nail plate that bends upward at the sides, creating a shallow spoon-like depression in the center. The nail may break, chip, or snag more easily than usual and may appear fragile over time.',
+      'underlyingIntro':
+          'The development of spoon-shaped, thin, and fragile nails, especially when gradual and without clear trauma, may indicate nail-plate remodeling associated with hematologic and nutritional imbalance. These nail changes may correlate with:',
+      'underlyingMetabolic':
+          'Metabolic / circulatory: iron deficiency anemia and other chronic low-oxygen or low-hemoglobin states that weaken tissue support and alter how the nail matrix forms the plate.',
+      'underlyingImmune':
+          'Immune function: autoimmune or inflammatory diseases, particularly those affecting the gut or blood vessels, that interfere with nutrient absorption or red blood cell production.',
+      'underlyingNutrient':
+          'Nutrient / endocrine: poor dietary intake, chronic blood loss, malabsorption syndromes, or thyroid and other endocrine disorders that disturb iron balance or protein metabolism and lead to structurally weaker nails.',
+      'underlyingOrgan':
+          'Organ health: chronic disorders of the gastrointestinal tract, kidneys, or liver that cause repeated nutrient loss or impaired processing, with koilonychia serving as an outward sign that internal organ function and blood status deserve closer evaluation.',
+      'nextSteps':
+          '• Hematologic and nutritional evaluation: new or worsening spoon nails should be discussed with a healthcare provider. Blood tests for iron levels, complete blood count, and related markers can detect anemia and related imbalances.\n'
+          '• Internal health screening: mention symptoms such as fatigue, weakness, dizziness, shortness of breath, pale skin, unusual cravings, or digestive complaints so that possible internal causes can be identified and treated.',
+      'whyMatters':
+          'Koilonychia is not just a surface irregularity; it is frequently a visible indicator of iron deficiency or other systemic health problems that may have been progressing quietly over time. Because nails grow slowly, spoon-shaped changes often reflect ongoing internal imbalance. Identifying and treating the underlying cause early supports better blood health, improved energy, and, over time, restoration of healthier nail structure.',
+    },
+
     'Unknown / Not in trained classes': {
       'displayName': 'Unknown / Not in trained classes',
       'confidence': '—',
@@ -137,7 +216,7 @@ class ResultPage extends StatelessWidget {
       'scannedTexture':
           'Texture, thickness, and growth pattern are not clearly aligned with the known reference conditions. The nail may appear normal, mildly irregular, or affected by factors outside the model’s training data.',
       'underlyingIntro':
-          'The current scan does not match any of the five specific nail presentations the model was trained on. This result does not confirm that the nail is healthy or unhealthy and may be influenced by image limitations or an unrecognized pattern.',
+          'The current scan does not match any of the specific nail presentations the model was trained on. This result does not confirm that the nail is healthy or unhealthy and may be influenced by image limitations or an unrecognized pattern.',
       'underlyingMetabolic':
           'Metabolic / circulatory: internal contributors cannot be determined from this scan alone.',
       'underlyingImmune':

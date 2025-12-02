@@ -95,6 +95,53 @@ class UploadedResult extends StatelessWidget {
           'for psoriasis, joint symptoms, or other autoimmune conditions, which makes treatment more effective '
           'and reduces the risk of long-term complications.',
     },
+
+    // 🔹 NEW: Beau’s Lines
+    'Beau’s Lines': {
+      'displayName': 'Beau’s Lines',
+      'color': 'Normal or slightly pale nail with horizontal bands',
+      'texture': 'Transverse ridges or dents across the nail',
+      'shape': 'Grooved line spanning the width of the nail',
+      'confidence': '87%', // fallback
+      'risk': 'Moderate',
+      'description':
+          'Beau’s lines are horizontal grooves that appear when nail growth is temporarily slowed or interrupted. '
+          'They often reflect a past episode of significant internal stress, such as severe infection with high fever, '
+          'major surgery, metabolic imbalance, or serious illness affecting vital organs. The lines themselves are not harmful, '
+          'but when they appear on several nails or recur, they may signal underlying systemic problems that should be reviewed '
+          'with a doctor.',
+    },
+
+    // 🔹 NEW: Bluish Nail
+    'Bluish Nail': {
+      'displayName': 'Bluish Nail',
+      'color': 'Bluish, purplish, or grayish nail bed',
+      'texture': 'Usually smooth surface with normal thickness',
+      'shape': 'Normal nail shape with dusky or oxygen-poor appearance',
+      'confidence': '87%', // fallback
+      'risk': 'High',
+      'description':
+          'A bluish nail indicates that the blood under the nail may be carrying less oxygen than normal. This can be linked to '
+          'circulation problems, anemia, or more serious internal conditions affecting the heart or lungs. While brief color changes '
+          'from cold are often harmless, persistent or unexplained bluish nails, especially with shortness of breath, chest pain, or dizziness, '
+          'may reflect significant cardiopulmonary or vascular disease and need prompt medical evaluation.',
+    },
+
+    // 🔹 NEW: Koilonychia
+    'Koilonychia': {
+      'displayName': 'Koilonychia',
+      'color': 'Pale, dull, or slightly whitish nail plate',
+      'texture': 'Thin, soft, and easily breakable surface',
+      'shape': 'Center of nail sunken with edges curving upward like a spoon',
+      'confidence': '87%', // fallback
+      'risk': 'Moderate',
+      'description':
+          'Koilonychia is a spoon-shaped nail deformity where the nail becomes thin and the edges lift while the center dips inward. '
+          'It is commonly associated with iron deficiency anemia and other problems affecting blood and nutrition. Because spoon nails can be '
+          'an external sign of internal issues such as anemia, chronic blood loss, malabsorption, or endocrine disorders, new or progressive spooning '
+          'should be checked so the underlying cause can be treated and overall health protected.',
+    },
+
     'Unknown / Not in trained classes': {
       'displayName': 'Unknown / Not in trained classes',
       'color': 'Varies',

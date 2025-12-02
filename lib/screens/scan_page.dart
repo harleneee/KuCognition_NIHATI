@@ -2,10 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-// ⭐ history needs auth + firestore + storage
+// ⭐ history needs auth + firestore
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+
+// 🔹 Supabase for image storage (match UploadedPage)
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:kucognition_app/data/api_service.dart';
 import 'package:kucognition_app/data/disease_data.dart';
@@ -45,7 +47,43 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   // =====================================================================
-  // 🔥 Call Backend API + UPLOAD IMAGE + SAVE TO HISTORY
+  // 🔹 Upload to Supabase `history` bucket and return **public URL**.
+  //     (Same pattern as UploadedPage)
+  // =====================================================================
+  Future<String?> _uploadToSupabase(String filePath) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+
+      final bytes = await File(filePath).readAsBytes();
+      final fileName = filePath.split(Platform.pathSeparator).last;
+
+      final String storageFileName =
+          '${user.uid}/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+
+      await supabase.storage.from('history').uploadBinary(
+            storageFileName,
+            bytes,
+            fileOptions: const FileOptions(
+              upsert: false,
+              contentType: 'image/jpeg',
+            ),
+          );
+
+      final publicUrl =
+          supabase.storage.from('history').getPublicUrl(storageFileName);
+
+      debugPrint('✅ Supabase upload success (scan). URL: $publicUrl');
+      return publicUrl;
+    } catch (e) {
+      debugPrint('❌ Supabase upload error (scan): $e');
+      return null;
+    }
+  }
+
+  // =====================================================================
+  // 🔥 Call Backend API + UPLOAD IMAGE (Supabase) + SAVE TO HISTORY
   // =====================================================================
   Future<void> _runPrediction(File file) async {
     if (_loading) return;
@@ -60,10 +98,10 @@ class _ScanPageState extends State<ScanPage> {
       final double confidence =
           (result['confidence'] as num).toDouble(); // handles int/double
 
-      // 1) Try to upload image to Firebase Storage (if user logged in)
-      final String? imageUrl = await _uploadImageToStorage(file);
+      // 1) Upload image to Supabase (if user logged in)
+      final String? imageUrl = await _uploadToSupabase(file.path);
 
-      // 2) Save this scan to Firestore history
+      // 2) Save this scan to Firestore history (same schema as UploadedPage)
       await _saveScanToHistory(
         label: label,
         confidence: confidence,
@@ -85,42 +123,20 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   // =====================================================================
-  // ⭐ Upload image to Firebase Storage
-  // =====================================================================
-  Future<String?> _uploadImageToStorage(File file) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      // not logged in -> skip uploading, history will also skip image
-      return null;
-    }
-
-    try {
-      final storageRef = FirebaseStorage.instance.ref().child(
-          'user_scans/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg');
-
-      final uploadTask = storageRef.putFile(file);
-      final snapshot = await uploadTask.whenComplete(() {});
-
-      final downloadUrl = await snapshot.ref.getDownloadURL();
-      return downloadUrl;
-    } catch (e) {
-      debugPrint('Error uploading image to storage: $e');
-      return null; // fallback: history will store null imageUrl
-    }
-  }
-
-  // =====================================================================
-  // ⭐ helper to map label -> risk (for history card)
+  // ⭐ helper to map label -> risk (8 classes)
   // =====================================================================
   String _riskForLabel(String label) {
     switch (label) {
       case 'Acral Lentiginous Melanoma':
+      case 'Bluish Nail':
         return 'High';
       case 'Healthy Nail':
         return 'Low';
       case 'Clubbing':
       case 'Onychogryphosis':
       case 'Pitting':
+      case 'Beau’s Lines':
+      case 'Koilonychia':
         return 'Moderate';
       case 'Unknown / Not in trained classes':
         return 'Unknown';
@@ -130,7 +146,7 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   // =====================================================================
-  // ⭐ Write to Firestore history
+  // ⭐ Write to Firestore history (mirror UploadedPage schema)
   // =====================================================================
   Future<void> _saveScanToHistory({
     required String label,
@@ -148,13 +164,17 @@ class _ScanPageState extends State<ScanPage> {
         .collection('history');
 
     await historyRef.add({
-      'predictionLabel': label,
-      'conditionKey': label, // same string for now
-      'confidence': confidence,
-      'risk': risk,
-      'imageUrl': imageUrl,   // ✅ Storage URL (or null if upload failed)
-      'timestamp': Timestamp.now(),
+      'predictionLabel': label,       // human-readable label
+      'conditionKey': label,          // same label as key
+      'confidence': confidence,       // 0–1 double
+      'risk': risk,                   // High/Moderate/Low/Unknown
+      'imageUrl': imageUrl,           // Supabase public URL or null
+      'imagePath': null,              // keep same as UploadedPage
+      'source': 'scan',               // "scan" vs "upload"
+      'timestamp': Timestamp.now(),   // match UploadedPage style
     });
+
+    debugPrint('✅ History saved for camera scan.');
   }
 
   // =====================================================================
