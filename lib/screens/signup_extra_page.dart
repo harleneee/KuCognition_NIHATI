@@ -16,7 +16,7 @@ class _SignUpExtraPageState extends State<SignUpExtraPage> {
   String? _selectedSex;
   bool isLoading = false;
 
-  Map<String, dynamic>? baseData; // from page 1
+  Map<String, dynamic>? baseData;
 
   @override
   void didChangeDependencies() {
@@ -41,7 +41,7 @@ class _SignUpExtraPageState extends State<SignUpExtraPage> {
 
   Future<void> _createAccount() async {
     if (baseData == null) {
-      showError("Missing signup data. Please go back and try again.");
+      showError("Missing signup data.");
       return;
     }
 
@@ -53,24 +53,28 @@ class _SignUpExtraPageState extends State<SignUpExtraPage> {
       return;
     }
 
-    if (_selectedSex == null || _selectedSex!.isEmpty) {
+    if (_selectedSex == null) {
       showError("Please select your sex.");
       return;
     }
 
-    final fullName = baseData!["fullName"] as String;
-    final email = baseData!["email"] as String;
-    final password = baseData!["password"] as String;
+    final fullName = baseData!["fullName"];
+    final email = baseData!["email"];
+    final password = baseData!["password"];
 
     setState(() => isLoading = true);
 
     try {
-      UserCredential userCred = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
+      UserCredential userCred =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-      final uid = userCred.user!.uid;
-
-      await FirebaseFirestore.instance.collection("users").doc(uid).set({
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(userCred.user!.uid)
+          .set({
         "fullName": fullName,
         "email": email,
         "birthday": birthday,
@@ -107,222 +111,322 @@ class _SignUpExtraPageState extends State<SignUpExtraPage> {
           ],
         ),
       );
-    } on FirebaseAuthException catch (e) {
-      String msg = "Signup failed.";
-
-      switch (e.code) {
-        case 'email-already-in-use':
-          msg = "This email is already registered.";
-          break;
-        case 'invalid-email':
-          msg = "The email address is not valid.";
-          break;
-        case 'weak-password':
-          msg = "The password is too weak.";
-          break;
-        case 'operation-not-allowed':
-          msg = "Email/password sign-up is not enabled.";
-          break;
-        default:
-          msg = e.message ?? "Signup failed. Please try again.";
-      }
-      showError(msg);
     } catch (e) {
-      showError("Unexpected error: $e");
+      showError("Signup failed: $e");
     } finally {
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final fullName = baseData != null ? baseData!["fullName"] as String : "";
+    final fullName = baseData?["fullName"] ?? "";
 
     return Scaffold(
       backgroundColor: const Color(0xFFEAF5FD),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFEAF5FD),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        title: const Text(
-          "Complete Profile",
-          style: TextStyle(
-            color: Color(0xFF1F41BB),
-            fontWeight: FontWeight.bold,
+      body: Column(
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.20,
+            child: const BreathingGradient(),
           ),
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (fullName.isNotEmpty) ...[
-              Text(
-                "Hi, $fullName 👋",
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1F41BB),
-                ),
-              ),
-              const SizedBox(height: 4),
-            ],
-            const Text(
-              "Step 2 of 2 • Add your profile details",
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "This helps us personalize your KuCognition experience.",
-              style: TextStyle(fontSize: 13),
-            ),
-            const SizedBox(height: 24),
 
-            // Birthday
-            _inputField(
-              "Birthday (e.g. Jan 1, 2000)",
-              birthdayController,
-              keyboardType: TextInputType.datetime,
-            ),
-            const SizedBox(height: 15),
-
-            // Phone
-            _inputField(
-              "Phone Number",
-              phoneController,
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 15),
-
-            // Sex dropdown
-            const Text(
-              "Sex",
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 6),
-            Container(
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: const [
+                color: const Color(0xFFF4F9FF),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(35)),
+                boxShadow: [
                   BoxShadow(
-                    blurRadius: 4,
-                    color: Colors.black12,
-                    offset: Offset(0, 2),
+                    color: Colors.black.withOpacity(0.07),
+                    blurRadius: 25,
+                    spreadRadius: 8,
+                    offset: const Offset(0, -5),
                   ),
                 ],
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedSex,
-                  hint: const Text("Select sex"),
-                  items: const [
-                    DropdownMenuItem(
-                      value: "Male",
-                      child: Text("Male"),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Column(
+                        children: [
+                          Image.asset(
+                            "assets/images/logo.png",
+                            width: 65,
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            "Complete Profile",
+                            style: TextStyle(
+                              fontSize: 24,
+                              color: Color(0xFF1F41BB),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    DropdownMenuItem(
-                      value: "Female",
-                      child: Text("Female"),
+
+                    const SizedBox(height: 16),
+
+                    if (fullName.isNotEmpty)
+                      Text(
+                        "Hi, $fullName 👋",
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1F41BB),
+                        ),
+                      ),
+
+                    const SizedBox(height: 4),
+
+                    const Text(
+                      "Step 2 of 2 • Add your profile details",
+                      style: TextStyle(fontSize: 13, color: Colors.black54),
                     ),
-                    DropdownMenuItem(
-                      value: "Prefer not to say",
-                      child: Text("Prefer not to say"),
+                    const SizedBox(height: 3),
+                    const Text(
+                      "This helps us personalize your KuCognition experience.",
+                      style: TextStyle(fontSize: 13),
                     ),
+
+                    const SizedBox(height: 22),
+
+                    const Text(
+                      "Birthday (e.g. Jan 1, 2000)",
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    _bubbleInput(
+                      controller: birthdayController,
+                      icon: Icons.calendar_today_outlined,
+                      keyboard: TextInputType.datetime,
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    const Text(
+                      "Phone Number",
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    _bubbleInput(
+                      controller: phoneController,
+                      icon: Icons.phone_outlined,
+                      keyboard: TextInputType.phone,
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    const Text(
+                      "Sex",
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    _sexDropdown(),
+
+                    const SizedBox(height: 30),
+
+                    isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF3B87D2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                              onPressed: _createAccount,
+                              child: const Text(
+                                "Create Account",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
                   ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedSex = value;
-                    });
-                  },
                 ),
               ),
             ),
-
-            const SizedBox(height: 30),
-
-            isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3B87D2),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        elevation: 3,
-                      ),
-                      onPressed: _createAccount,
-                      child: const Text(
-                        "Create Account",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _inputField(
-    String label,
-    TextEditingController controller, {
-    TextInputType keyboardType = TextInputType.text,
+  // BLUE BUBBLE INPUT
+  Widget _bubbleInput({
+    required TextEditingController controller,
+    required IconData icon,
+    TextInputType keyboard = TextInputType.text,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+    return Container(
+      height: 55,
+      decoration: BoxDecoration(
+        color: const Color(0xFFD6E8FF),   // ← MATCH SEX FIELD COLOR
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 3),
           ),
-        ),
-        const SizedBox(height: 5),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: const [
-              BoxShadow(
-                blurRadius: 4,
-                color: Colors.black12,
-                offset: Offset(0, 2),
-              ),
-            ],
+        ],
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 12),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              color: Color(0xFFEAF5FD),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 20, color: Color(0xFF3B87D2)),
           ),
-          child: TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            decoration: const InputDecoration(
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 15,
-                vertical: 15,
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              keyboardType: keyboard,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
               ),
-              border: InputBorder.none,
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 10),
+        ],
+      ),
+    );
+  }
+
+  // DROP DOWN
+  Widget _sexDropdown() {
+    return Container(
+      height: 55,
+      decoration: BoxDecoration(
+        color: const Color(0xFFD6E8FF),
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              color: Color(0xFFEAF5FD),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.person_outline,
+                size: 20, color: Color(0xFF3B87D2)),
+          ),
+          const SizedBox(width: 12),
+
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedSex,
+                hint: const Text("Select sex"),
+                items: const [
+                  DropdownMenuItem(value: "Male", child: Text("Male")),
+                  DropdownMenuItem(value: "Female", child: Text("Female")),
+                  DropdownMenuItem(
+                    value: "Prefer not to say",
+                    child: Text("Prefer not to say"),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() => _selectedSex = value);
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
+
+// BREATHING GRADIENT
+class BreathingGradient extends StatefulWidget {
+  const BreathingGradient({super.key});
+
+  @override
+  State<BreathingGradient> createState() => _BreathingGradientState();
+}
+
+class _BreathingGradientState extends State<BreathingGradient>
+    with TickerProviderStateMixin {
+  late AnimationController _c1;
+  late AnimationController _c2;
+
+  @override
+  void initState() {
+    super.initState();
+    _c1 = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+
+    _c2 = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_c1, _c2]),
+      builder: (_, __) {
+        final r1 = 0.9 + (_c1.value * 0.35);
+
+        return Container(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment.topCenter,
+              radius: r1,
+              colors: const [
+                Color(0xFF3B87D2),
+                Color(0xFFEAF5FD),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _c1.dispose();
+    _c2.dispose();
+    super.dispose();
+  }
+}
+
