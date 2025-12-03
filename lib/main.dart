@@ -14,7 +14,6 @@ import 'screens/scan_page.dart';
 import 'screens/history_page.dart';
 import 'screens/uploaded_page.dart';
 import 'screens/learnmore_page.dart';
-import 'screens/diseaseresults_page.dart';
 import 'screens/uploaded_result.dart';
 import 'screens/result_page.dart';
 
@@ -22,13 +21,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Firebase init
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Supabase init
   await Supabase.initialize(
-    url: 'https://tsrpxhsdaibzbudapooh.supabase.co', // <-- put your Project URL here
+    url:
+        'https://tsrpxhsdaibzbudapooh.supabase.co', // <-- put your Project URL here
     anonKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzcnB4aHNkYWliemJ1ZGFwb29oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MDQ3MTAsImV4cCI6MjA3OTk4MDcxMH0.verlLgyhQ5_yFth-v_Zp5qdWd8ugz6ZloE-hFWlHXh0',
   );
@@ -46,16 +44,13 @@ class NailHealthApp extends StatelessWidget {
       title: 'Nail Health Detection',
 
       // OPTION A → Use home: when testing a specific screen
-      
-      home: const LoginPage(), // ← current start screen
+      // home: const LoginPage(), // ← current start screen
       // home: UploadedPage(),
       // home: DashboardPage(),
       // home: ScanPage(),
 
       // OPTION B → Use your normal navigation
-      
-      // initialRoute: '/start',
-
+      initialRoute: '/start',
       routes: {
         '/start': (context) => StartPage(),
         '/login': (context) => const LoginPage(),
