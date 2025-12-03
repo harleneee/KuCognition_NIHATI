@@ -1,6 +1,7 @@
 // lib/pages/chatbot_page.dart  (path may differ in your project)
 import 'package:flutter/material.dart';
 import '../data/chatbot_api.dart'; // adjust if your path is different
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 /// Local color palette for the chat screen.
 class AppColors {
@@ -12,10 +13,7 @@ class AppColors {
 class ChatbotPage extends StatefulWidget {
   final String initialPrompt;
 
-  const ChatbotPage({
-    super.key,
-    required this.initialPrompt,
-  });
+  const ChatbotPage({super.key, required this.initialPrompt});
 
   @override
   State<ChatbotPage> createState() => _ChatbotPageState();
@@ -28,6 +26,13 @@ class _ChatbotPageState extends State<ChatbotPage> {
   final List<_ChatMessage> _messages = [];
   bool _isSending = false;
   bool _isBotTyping = false; // typing indicator toggle
+
+  String _formatTime(DateTime dt) {
+    final h = dt.hour > 12 ? dt.hour - 12 : dt.hour;
+    final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+    final m = dt.minute.toString().padLeft(2, '0');
+    return "$h:$m $ampm";
+  }
 
   final List<String> _quickPrompts = const [
     'What can you do for me?',
@@ -56,14 +61,18 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
   void _addUserMessage(String text) {
     setState(() {
-      _messages.add(_ChatMessage(text: text, isUser: true));
+      _messages.add(
+        _ChatMessage(text: text, isUser: true, timestamp: DateTime.now()),
+      );
     });
     _scrollToBottom();
   }
 
   void _addBotMessage(String text) {
     setState(() {
-      _messages.add(_ChatMessage(text: text, isUser: false));
+      _messages.add(
+        _ChatMessage(text: text, isUser: false, timestamp: DateTime.now()),
+      );
     });
     _scrollToBottom();
   }
@@ -104,7 +113,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
       _isBotTyping = false; // hide typing bubble
     });
 
-    final reply = result['reply']?.toString() ??
+    final reply =
+        result['reply']?.toString() ??
         'I had trouble understanding the response from the server.';
     _addBotMessage(reply);
   }
@@ -182,10 +192,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 Text(
                   'Nail Health Assistant',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.black54, fontSize: 12),
                 ),
               ],
             ),
@@ -226,8 +233,10 @@ class _ChatbotPageState extends State<ChatbotPage> {
               return Align(
                 alignment: Alignment.centerRight,
                 child: Container(
-                  margin:
-                      const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  margin: const EdgeInsets.symmetric(
+                    vertical: 6,
+                    horizontal: 4,
+                  ),
                   padding: const EdgeInsets.symmetric(
                     vertical: 10,
                     horizontal: 14,
@@ -237,10 +246,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                   ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFF4F8BFF),
-                        AppColors.bubbleUser,
-                      ],
+                      colors: [Color(0xFF4F8BFF), AppColors.bubbleUser],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -253,13 +259,26 @@ class _ChatbotPageState extends State<ChatbotPage> {
                       ),
                     ],
                   ),
-                  child: Text(
-                    msg.text,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      height: 1.3,
-                      color: Colors.white,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        msg.text,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.3,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatTime(msg.timestamp),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -268,8 +287,10 @@ class _ChatbotPageState extends State<ChatbotPage> {
               return Align(
                 alignment: Alignment.centerLeft,
                 child: Container(
-                  margin:
-                      const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  margin: const EdgeInsets.symmetric(
+                    vertical: 6,
+                    horizontal: 4,
+                  ),
                   padding: const EdgeInsets.symmetric(
                     vertical: 10,
                     horizontal: 14,
@@ -288,13 +309,40 @@ class _ChatbotPageState extends State<ChatbotPage> {
                       ),
                     ],
                   ),
-                  child: Text(
-                    msg.text,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      height: 1.35,
-                      color: Colors.black87,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      MarkdownBody(
+                        data: msg.text,
+                        softLineBreak: true,
+                        selectable: false,
+                        styleSheet: MarkdownStyleSheet(
+                          p: const TextStyle(
+                            fontSize: 14,
+                            height: 1.35,
+                            color: Colors.black87,
+                          ),
+                          strong: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14.5,
+                            height: 1.35,
+                            color: Colors.black87,
+                          ),
+                          a: const TextStyle(
+                            color: Color(0xFF2563EB),
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatTime(msg.timestamp),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -318,13 +366,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
       alignment: Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        padding: const EdgeInsets.symmetric(
-          vertical: 8,
-          horizontal: 14,
-        ),
-        constraints: const BoxConstraints(
-          maxWidth: 160,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+        constraints: const BoxConstraints(maxWidth: 160),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: radius,
@@ -365,8 +408,10 @@ class _ChatbotPageState extends State<ChatbotPage> {
             return GestureDetector(
               onTap: () => _handleQuickPrompt(prompt),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(999),
@@ -380,10 +425,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 ),
                 child: Text(
                   prompt,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.black87,
-                  ),
+                  style: const TextStyle(fontSize: 11, color: Colors.black87),
                 ),
               ),
             );
@@ -401,8 +443,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
         children: [
           Expanded(
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(999),
@@ -449,10 +490,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF4F8BFF),
-                    AppColors.sendButton,
-                  ],
+                  colors: [Color(0xFF4F8BFF), AppColors.sendButton],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -471,8 +509,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : const Icon(
@@ -492,16 +531,15 @@ class _ChatbotPageState extends State<ChatbotPage> {
 class _ChatMessage {
   final String text;
   final bool isUser;
+  final DateTime timestamp;
 
-  _ChatMessage({
-    required this.text,
-    required this.isUser,
-  });
+  _ChatMessage({required this.text, required this.isUser, DateTime? timestamp})
+    : timestamp = timestamp ?? DateTime.now();
 }
 
 /// Simple static dot used in typing indicator.
 class _TypingDot extends StatelessWidget {
-  const _TypingDot({super.key});
+  const _TypingDot();
 
   @override
   Widget build(BuildContext context) {
@@ -598,7 +636,6 @@ class _SoftGlow extends StatelessWidget {
   final double softness; // 0–1, higher = harder edge, lower = softer
 
   const _SoftGlow({
-    super.key,
     required this.size,
     required this.color,
     required this.opacity,
