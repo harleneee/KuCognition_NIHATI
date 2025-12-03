@@ -65,12 +65,17 @@ class _SignUpExtraPageState extends State<SignUpExtraPage> {
     setState(() => isLoading = true);
 
     try {
+      // 1) Create account in Firebase Auth
       UserCredential userCred =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
+      // 🔹 2) VERY IMPORTANT: set displayName = fullName
+      await userCred.user!.updateDisplayName(fullName);
+
+      // 3) Save extra profile data in Firestore
       await FirebaseFirestore.instance
           .collection("users")
           .doc(userCred.user!.uid)
@@ -89,6 +94,7 @@ class _SignUpExtraPageState extends State<SignUpExtraPage> {
 
       if (!mounted) return;
 
+      // 4) Show dialog then back to Login (same as before)
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -279,7 +285,7 @@ class _SignUpExtraPageState extends State<SignUpExtraPage> {
     return Container(
       height: 55,
       decoration: BoxDecoration(
-        color: const Color(0xFFD6E8FF),   // ← MATCH SEX FIELD COLOR
+        color: const Color(0xFFD6E8FF),
         borderRadius: BorderRadius.circular(30),
         boxShadow: const [
           BoxShadow(
@@ -299,7 +305,7 @@ class _SignUpExtraPageState extends State<SignUpExtraPage> {
               color: Color(0xFFEAF5FD),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 20, color: Color(0xFF3B87D2)),
+            child: Icon(icon, size: 20, color: const Color(0xFF3B87D2)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -346,7 +352,6 @@ class _SignUpExtraPageState extends State<SignUpExtraPage> {
                 size: 20, color: Color(0xFF3B87D2)),
           ),
           const SizedBox(width: 12),
-
           Expanded(
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
@@ -429,4 +434,3 @@ class _BreathingGradientState extends State<BreathingGradient>
     super.dispose();
   }
 }
-

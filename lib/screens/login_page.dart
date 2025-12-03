@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+// ⛔️ If the file is actually named `dashboard_screen.dart`, palitan mo 'dashboard_page.dart'
+import 'dashboard_page.dart'; // or 'dashboard_screen.dart' – depende sa file name mo
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -14,7 +17,6 @@ class _LoginPageState extends State<LoginPage> {
   bool obscure = true;
   bool loading = false;
 
-  // LOGIN FUNCTION → GO TO DASHBOARD
   Future<void> loginUser() async {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
@@ -27,15 +29,23 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => loading = true);
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      // sign in and get user
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+      final user = cred.user;
+      final displayName = user?.displayName;
 
       if (!mounted) return;
 
-      // DIRECT TO DASHBOARD
-      Navigator.pushReplacementNamed(context, "/dashboard");
+      // go to dashboard WITH username from Firebase
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DashboardScreen(username: displayName),
+        ),
+      );
     } on FirebaseAuthException catch (e) {
       showError(e.message ?? "Login failed.");
     } finally {
@@ -55,20 +65,18 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: const Color(0xFFEAF5FD),
       body: Column(
         children: [
-          // TOP BREATHING GRADIENT
           SizedBox(
             height: MediaQuery.of(context).size.height * 0.20,
             child: const BreathingGradient(),
           ),
-
-          // BUBBLE LAYOUT
           Expanded(
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
               decoration: BoxDecoration(
                 color: const Color(0xFFF4F9FF),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(35)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(35)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.07),
@@ -81,11 +89,8 @@ class _LoginPageState extends State<LoginPage> {
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    // LOGO
                     Image.asset("assets/images/logo.png", width: 65),
                     const SizedBox(height: 12),
-
-                    // TITLE
                     const Text(
                       "Login",
                       style: TextStyle(
@@ -94,17 +99,15 @@ class _LoginPageState extends State<LoginPage> {
                         color: Color(0xFF1F41BB),
                       ),
                     ),
-
                     const SizedBox(height: 6),
                     const Text(
                       "Sign in to continue checking your\nnail health with KuCognition.",
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 13, color: Colors.black54),
                     ),
-
                     const SizedBox(height: 35),
 
-                    // EMAIL FIELD
+                    // EMAIL
                     _roundedField(
                       controller: emailController,
                       hint: "Email",
@@ -112,7 +115,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 18),
 
-                    // PASSWORD FIELD
+                    // PASSWORD
                     _roundedField(
                       controller: passwordController,
                       hint: "Password",
@@ -128,8 +131,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
 
                     const SizedBox(height: 6),
-
-                    // FORGOT PASSWORD
                     Align(
                       alignment: Alignment.centerRight,
                       child: Text(
@@ -141,10 +142,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 25),
-
-                    // SIGN IN BUTTON
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -157,7 +155,9 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         onPressed: loading ? null : loginUser,
                         child: loading
-                            ? const CircularProgressIndicator(color: Colors.white)
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
                             : const Text(
                                 "Sign In",
                                 style: TextStyle(
@@ -168,10 +168,7 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                       ),
                     ),
-
                     const SizedBox(height: 20),
-
-                    // SIGN UP LINK
                     GestureDetector(
                       onTap: () => Navigator.pushNamed(context, "/signup"),
                       child: const Text(
@@ -192,7 +189,6 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // INPUT FIELD UI
   Widget _roundedField({
     required TextEditingController controller,
     required String hint,
@@ -217,7 +213,7 @@ class _LoginPageState extends State<LoginPage> {
         children: [
           const SizedBox(width: 12),
 
-          // ICON
+          // 🔧 FIX: use the `icon` parameter, not always email
           Container(
             width: 36,
             height: 36,
@@ -225,12 +221,14 @@ class _LoginPageState extends State<LoginPage> {
               shape: BoxShape.circle,
               color: Color(0xFFEAF5FD),
             ),
-            child: Icon(icon, color: Color(0xFF3B87D2), size: 20),
+            child: Icon(
+              icon,
+              color: const Color(0xFF3B87D2),
+              size: 20,
+            ),
           ),
 
           const SizedBox(width: 12),
-
-          // TEXTFIELD
           Expanded(
             child: TextField(
               controller: controller,
@@ -238,11 +236,11 @@ class _LoginPageState extends State<LoginPage> {
               decoration: InputDecoration(
                 hintText: hint,
                 border: InputBorder.none,
-                hintStyle: const TextStyle(fontSize: 15, color: Colors.black54),
+                hintStyle:
+                    const TextStyle(fontSize: 15, color: Colors.black54),
               ),
             ),
           ),
-
           if (suffix != null) suffix,
           const SizedBox(width: 10),
         ],
@@ -251,7 +249,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// BREATHING GRADIENT
 class BreathingGradient extends StatefulWidget {
   const BreathingGradient({super.key});
   @override

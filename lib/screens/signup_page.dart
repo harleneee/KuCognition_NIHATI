@@ -77,17 +77,10 @@ class _SignUpPageState extends State<SignUpPage> {
       backgroundColor: const Color(0xFFEAF5FD),
       body: Column(
         children: [
-          // ----------------------------
-          // 20% BREATHING GRADIENT
-          // ----------------------------
           SizedBox(
             height: MediaQuery.of(context).size.height * 0.20,
             child: const BreathingGradient(),
           ),
-
-          // ----------------------------
-          // 80% WHITE BUBBLE
-          // ----------------------------
           Expanded(
             child: Container(
               width: double.infinity,
@@ -110,15 +103,11 @@ class _SignUpPageState extends State<SignUpPage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 6),
-
-                  // LOGO
                   Image.asset(
                     "assets/images/logo.png",
                     width: 65,
                   ),
-
                   const SizedBox(height: 15),
-
                   const Text(
                     "Sign Up",
                     style: TextStyle(
@@ -127,38 +116,29 @@ class _SignUpPageState extends State<SignUpPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-
                   const SizedBox(height: 6),
                   const Text(
                     "Step 1 of 2 • Create your account",
                     style: TextStyle(fontSize: 13, color: Colors.black54),
                   ),
-
                   const SizedBox(height: 4),
                   const Text(
                     "You'll add your profile details on the next step.",
                     style: TextStyle(fontSize: 13),
                   ),
-
                   const SizedBox(height: 22),
-
-                  // FULL NAME
                   _roundedField(
                     controller: fullNameController,
                     hint: "Full Name",
                     icon: Icons.person_outline,
                   ),
                   const SizedBox(height: 18),
-
-                  // EMAIL
                   _roundedField(
                     controller: emailController,
                     hint: "Email",
                     icon: Icons.email_outlined,
                   ),
                   const SizedBox(height: 18),
-
-                  // PASSWORD
                   _roundedField(
                     controller: passwordController,
                     hint: "Password",
@@ -179,8 +159,6 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                   ),
                   const SizedBox(height: 18),
-
-                  // CONFIRM PASSWORD
                   _roundedField(
                     controller: confirmPasswordController,
                     hint: "Confirm Password",
@@ -200,10 +178,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       },
                     ),
                   ),
-
                   const SizedBox(height: 30),
-
-                  // NEXT BUTTON
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -226,9 +201,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
                   GestureDetector(
                     onTap: () =>
                         Navigator.pushReplacementNamed(context, "/login"),
@@ -249,9 +222,6 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  // -----------------------------------------------------
-  //   BEAUTIFUL INPUT BUBBLE (CENTERED PLACEHOLDER)
-  // -----------------------------------------------------
   Widget _roundedField({
     required TextEditingController controller,
     required String hint,
@@ -275,8 +245,6 @@ class _SignUpPageState extends State<SignUpPage> {
       child: Row(
         children: [
           const SizedBox(width: 12),
-
-          // LEFT ICON
           Container(
             width: 36,
             height: 36,
@@ -284,12 +252,9 @@ class _SignUpPageState extends State<SignUpPage> {
               color: Color(0xFFEAF5FD),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 20, color: Color(0xFF3B87D2)),
+            child: Icon(icon, size: 20, color: const Color(0xFF3B87D2)),
           ),
-
           const SizedBox(width: 12),
-
-          // TEXT FIELD
           Expanded(
             child: TextField(
               controller: controller,
@@ -300,7 +265,6 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
             ),
           ),
-
           if (suffix != null) suffix,
           const SizedBox(width: 10),
         ],
@@ -309,9 +273,6 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 }
 
-// ------------------------------------------------------
-// BREATHING GRADIENT (SAME EFFECT AS LOGIN)
-// ------------------------------------------------------
 class BreathingGradient extends StatefulWidget {
   const BreathingGradient({super.key});
 

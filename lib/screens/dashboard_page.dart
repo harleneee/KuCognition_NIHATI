@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'scan_page.dart';
 import 'profile_page.dart';
-import 'chatbot_page.dart'; // 👈 NEW IMPORT
+import 'chatbot_page.dart';
+import 'history_page.dart';
 
-void main() {
-  runApp(const KuCognitionApp());
-}
-
-// --- COLOR AND CONSTANTS DEFINITION ---
 class AppColors {
   static const Color primaryBlue = Color(0xFF3B70B9);
   static const Color lightBackground = Color(0xFFEFF5F9);
@@ -19,103 +16,31 @@ class AppColors {
   static const Color iconColor = Color(0xFF3B70B9);
 }
 
-class KuCognitionApp extends StatelessWidget {
-  const KuCognitionApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'KuCognition Dashboard',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primaryBlue,
-          primary: AppColors.primaryBlue,
-          secondary: AppColors.primaryBlue,
-          background: AppColors.lightBackground,
-        ),
-        scaffoldBackgroundColor: AppColors.lightBackground,
-        fontFamily: 'Roboto',
-        appBarTheme: const AppBarTheme(
-          color: AppColors.primaryBlue,
-          elevation: 0,
-          foregroundColor: Colors.white,
-        ),
-      ),
-      home: const DashboardScreen(),
-    );
-  }
-}
-
-// --- CHATBOT SCREEN (old placeholder, now unused but kept for reference) ---
-class ChatbotScreen extends StatelessWidget {
-  final String initialPrompt;
-  const ChatbotScreen({super.key, required this.initialPrompt});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('KuBot Chat')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.psychology_alt_outlined,
-                  size: 80, color: AppColors.primaryBlue),
-              const SizedBox(height: 20),
-              const Text(
-                'Welcome to KuBot!',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'You clicked the prompt:',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                '"$initialPrompt"',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.scanButtonDark,
-                ),
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.scanButton,
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-                child: const Text('Back to Dashboard'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// --- DASHBOARD SCREEN ---
 class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+  final String? username;
+
+  const DashboardScreen({super.key, this.username});
+
+  String welcomeText() {
+    final clean = username?.trim();
+    if (clean != null && clean.isNotEmpty) {
+      return 'Welcome, $clean!';
+    }
+    return 'Welcome!';
+  }
+
+  Future<void> logout(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    // clear stack and go to login screen
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
 
-      // CHATBOT FAB — BIG + ANIMATION
+      // CHATBOT FAB
       floatingActionButton: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0.9, end: 1.0),
         duration: const Duration(seconds: 1),
@@ -129,7 +54,7 @@ class DashboardScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ChatbotPage(
+                    builder: (context) => const ChatbotPage(
                       initialPrompt: "Hello KuBot!",
                     ),
                   ),
@@ -148,53 +73,37 @@ class DashboardScreen extends StatelessWidget {
         },
       ),
 
-      // BOTTOM NAVIGATION BAR + CENTER SCAN BUTTON
-      bottomNavigationBar: Stack(
-        alignment: Alignment.center,
-        clipBehavior: Clip.none,
-        children: [
-          BottomAppBar(
-            height: 70,
-            elevation: 15,
-            shape: const CircularNotchedRectangle(),
-            notchMargin: 8,
-            color: Colors.white,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                // Home (just visual, stays on dashboard)
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.home, color: AppColors.primaryBlue),
-                    Text(
-                      "Home",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.primaryBlue,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(width: 40), // For center scan button
-
-                // Profile -> navigate to ProfilePage
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ProfilePage(),
-                      ),
-                    );
-                  },
-                  child: Column(
+      // BOTTOM NAV + SCAN BUTTON
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15), // stronger shadow
+              blurRadius: 18,
+              spreadRadius: 2,
+              offset: const Offset(0, -2), // shadow goes upward
+            ),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            BottomAppBar(
+              height: 70,
+              elevation: 0, // use container shadow instead
+              shape: const CircularNotchedRectangle(),
+              notchMargin: 8,
+              color: Colors.white,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Column(
                     mainAxisSize: MainAxisSize.min,
                     children: const [
-                      Icon(Icons.person_outline, color: AppColors.primaryBlue),
+                      Icon(Icons.home, color: AppColors.primaryBlue),
                       Text(
-                        "Profile",
+                        "Home",
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.primaryBlue,
@@ -202,105 +111,156 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          // CENTER SCAN BUTTON -> ScanPage
-          Positioned(
-            top: -32,
-            child: GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ScanPage(),
-                  ),
-                );
-              },
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryBlue,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryBlue.withOpacity(0.4),
-                      blurRadius: 12,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 6),
+                  const SizedBox(width: 40),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ProfilePage(),
+                        ),
+                      );
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.person_outline, color: AppColors.primaryBlue),
+                        Text(
+                          "Profile",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.primaryBlue,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.camera_alt_rounded,
-                  size: 36,
-                  color: Colors.white,
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              top: -32,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ScanPage(),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryBlue.withOpacity(0.4),
+                        blurRadius: 12,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt_rounded,
+                    size: 36,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
 
-      // BODY (SCROLLABLE)
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 160),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(context),
-                _buildScanActionCard(context),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20.0,
-                    vertical: 10.0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      _SectionTitle(title: 'Recent Scans'),
-                      _RecentScansCard(),
-                      _SectionTitle(title: 'Health Tips'),
-                      _HealthTipsCard(),
-                    ],
-                  ),
+        child: Stack(
+          children: [
+            // soft background blobs
+            Positioned(
+              top: -40,
+              right: -30,
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primaryBlue.withOpacity(0.08),
                 ),
-
-                const SizedBox(height: 10),
-                _buildRecommendedTopics(context),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20.0,
-                    vertical: 10.0,
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _SectionTitle(title: 'FAQs'),
-                      _FAQsSection(),
-                      _SectionTitle(title: 'About Us'),
-                      _AboutUsSection(),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+            Positioned(
+              bottom: 80,
+              left: -50,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.scanButton.withOpacity(0.05),
+                ),
+              ),
+            ),
+
+            SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 160),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    buildHeader(context),
+                    buildScanActionCard(context),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0,
+                        vertical: 10.0,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          SectionTitle(title: 'Recent Scans'),
+                          RecentScansCard(),
+                          SectionTitle(title: 'Health Tips'),
+                          _HealthTipsCarousel(), // ⬅️ carousel now
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+                    buildRecommendedTopics(context),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0,
+                        vertical: 10.0,
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SectionTitle(title: 'FAQs'),
+                          FAQsSection(),
+                          SectionTitle(title: 'About Us'),
+                          AboutUsSection(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // --- HEADER ---
-  Widget _buildHeader(BuildContext context) {
+  // --- HEADER: "Welcome, {username}!" + Logout ---
+  Widget buildHeader(BuildContext context) {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: const Duration(milliseconds: 700),
@@ -314,7 +274,7 @@ class DashboardScreen extends StatelessWidget {
         );
       },
       child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [AppColors.gradientStart, AppColors.gradientEnd],
@@ -329,15 +289,20 @@ class DashboardScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // top bar
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
+              children: [
                 Row(
                   children: [
-                    Icon(Icons.monitor_heart_outlined,
-                        color: Colors.white, size: 30),
-                    SizedBox(width: 8),
-                    Text(
+                    // Replace with Logo Image from Assets
+                    Image.asset(
+                      'assets/images/logo.png',
+                      width: 50,
+                      height: 50,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
                       'KuCognition',
                       style: TextStyle(
                         color: Colors.white,
@@ -347,52 +312,58 @@ class DashboardScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    Text(
-                      'Log out',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 16,
+                GestureDetector(
+                  onTap: () => logout(context),
+                  child: Row(
+                    children: const [
+                      Text(
+                        'Log out',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 4),
-                    Icon(Icons.logout, color: Colors.white70, size: 20),
-                  ],
+                      SizedBox(width: 4),
+                      Icon(Icons.logout, color: Colors.white70, size: 20),
+                    ],
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 25),
+            const SizedBox(height: 20),
+
+            // welcome text + desc
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Welcome!',
-                        style: TextStyle(
+                        welcomeText(),
+                        style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 32,
+                          fontSize: 30,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      SizedBox(height: 8),
-                      Text(
+                      const SizedBox(height: 6),
+                      const Text(
                         'Scan your nail to detect early signs of possible health conditions.',
                         style: TextStyle(
                           color: Colors.white70,
-                          fontSize: 16,
+                          fontSize: 15,
+                          height: 1.3,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: 16),
                 const Icon(
                   Icons.fingerprint,
-                  size: 90,
+                  size: 72,
                   color: Colors.white30,
                 ),
               ],
@@ -404,17 +375,19 @@ class DashboardScreen extends StatelessWidget {
   }
 
   // --- SCAN CARD ---
-  Widget _buildScanActionCard(BuildContext context) {
+  Widget buildScanActionCard(BuildContext context) {
     return Transform.translate(
-      offset: const Offset(0, -20),
+      offset: const Offset(0, -18),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Card(
-          elevation: 10,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          elevation: 8,
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.all(18.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -426,21 +399,27 @@ class DashboardScreen extends StatelessWidget {
                     color: AppColors.primaryBlue,
                   ),
                 ),
-                const Text(
-                  'Last Scan: none',
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                const SizedBox(height: 4),
+                Row(
+                  children: const [
+                    Icon(Icons.access_time, size: 16, color: Colors.grey),
+                    SizedBox(width: 6),
+                    Text(
+                      'Last Scan: none',
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 14),
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     gradient: const LinearGradient(
                       colors: [AppColors.scanButton, AppColors.scanButtonDark],
                     ),
                   ),
                   child: ElevatedButton(
-                    // 🔗 "Scan Now" -> ScanPage
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -450,18 +429,18 @@ class DashboardScreen extends StatelessWidget {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
+                      backgroundColor: const Color.fromARGB(9, 0, 0, 0),
                       foregroundColor: Colors.white,
                       shadowColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     child: const Text(
                       'Scan Now',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -475,8 +454,8 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // --- RECOMMENDED TOPICS ---
-  Widget _buildRecommendedTopics(BuildContext context) {
+  // --- RECOMMENDED TOPICS (KuBot) ---
+  Widget buildRecommendedTopics(BuildContext context) {
     final List<Map<String, dynamic>> topics = [
       {
         'prompt': 'What diseases can this app scan?',
@@ -496,12 +475,12 @@ class DashboardScreen extends StatelessWidget {
       },
     ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20.0),
-          child: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
             children: [
               Icon(Icons.question_answer, color: AppColors.primaryBlue),
               SizedBox(width: 8),
@@ -515,42 +494,44 @@ class DashboardScreen extends StatelessWidget {
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 100,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            itemCount: topics.length,
-            itemBuilder: (context, index) {
-              final topic = topics[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                child: _TopicChip(
-                  prompt: topic['prompt'],
-                  icon: topic['icon'],
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChatbotPage(
-                          initialPrompt: topic['prompt'],
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 130,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: topics.length,
+              itemBuilder: (context, index) {
+                final topic = topics[index];
+                return Padding(
+                  padding: EdgeInsets.only(
+                    right: index == topics.length - 1 ? 0 : 10,
+                  ),
+                  child: _TopicChip(
+                    prompt: topic['prompt'],
+                    icon: topic['icon'],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChatbotPage(
+                            initialPrompt: topic['prompt'],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-// --- TOPIC CHIP (FIXED OVERFLOW) ---
+// ----------------- OTHER WIDGETS -----------------
+
 class _TopicChip extends StatelessWidget {
   final String prompt;
   final IconData icon;
@@ -567,15 +548,15 @@ class _TopicChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 150,
+        width: 160,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              spreadRadius: 2,
+              color: Colors.grey.withOpacity(0.12),
+              spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 3),
             ),
@@ -583,18 +564,21 @@ class _TopicChip extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
+          mainAxisSize: MainAxisSize.max,
           children: [
-            Icon(icon, color: AppColors.scanButton, size: 28),
+            Icon(icon, color: AppColors.scanButton, size: 24),
             const SizedBox(height: 8),
-            Text(
-              prompt,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primaryBlue,
+            Expanded(
+              child: Text(
+                prompt,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryBlue,
+                ),
               ),
             ),
           ],
@@ -604,10 +588,9 @@ class _TopicChip extends StatelessWidget {
   }
 }
 
-// --- SECTIONS ---
-class _SectionTitle extends StatelessWidget {
+class SectionTitle extends StatelessWidget {
   final String title;
-  const _SectionTitle({required this.title});
+  const SectionTitle({required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -625,50 +608,155 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _RecentScansCard extends StatelessWidget {
-  const _RecentScansCard();
+class RecentScansCard extends StatelessWidget {
+  const RecentScansCard();
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: const Padding(
-        padding: EdgeInsets.all(15.0),
-        child: Row(
-          children: [
-            Icon(Icons.history, color: Colors.grey),
-            SizedBox(width: 10),
-            Text(
-              'No recent scans',
-              style: TextStyle(color: Colors.grey, fontSize: 16),
-            ),
-          ],
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const HistoryPage(),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Card(
+        elevation: 3,
+        color: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 14),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: AppColors.lightBackground,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.history,
+                  color: AppColors.primaryBlue,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'No recent scans',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                color: Colors.grey,
+                size: 22,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _HealthTipsCard extends StatelessWidget {
-  const _HealthTipsCard();
+class _HealthTipsCarousel extends StatefulWidget {
+  const _HealthTipsCarousel();
+
+  @override
+  State<_HealthTipsCarousel> createState() => _HealthTipsCarouselState();
+}
+
+class _HealthTipsCarouselState extends State<_HealthTipsCarousel> {
+  final PageController _controller = PageController();
+  int _current = 0;
+
+  final List<String> tips = const [
+    'White spots on nails can indicate a zinc deficiency, but they often grow out naturally.',
+    'Vertical ridges on the nails are common and often related to aging or mild dehydration.',
+    'Very pale nails may sometimes be associated with low iron levels or anemia.',
+  ];
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: Container(
-        padding: const EdgeInsets.all(15.0),
-        child: const Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      elevation: 2,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(14.0),
+        child: Column(
           children: [
-            Icon(Icons.lightbulb_outline, color: AppColors.scanButtonDark),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'White spots on nails can indicate a zinc deficiency, but they often grow out naturally.',
-                style: TextStyle(fontSize: 14),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightBackground,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.lightbulb_outline,
+                    color: AppColors.scanButtonDark,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SizedBox(
+                    height: 35,
+                    child: PageView.builder(
+                      controller: _controller,
+                      itemCount: tips.length,
+                      onPageChanged: (index) {
+                        setState(() => _current = index);
+                      },
+                      itemBuilder: (context, index) => Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          tips[index],
+                          style: const TextStyle(
+                            fontSize: 14,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                tips.length,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: _current == index ? 10 : 6,
+                  height: _current == index ? 10 : 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _current == index
+                        ? AppColors.scanButtonDark
+                        : Colors.grey.shade300,
+                  ),
+                ),
               ),
             ),
           ],
@@ -678,8 +766,8 @@ class _HealthTipsCard extends StatelessWidget {
   }
 }
 
-class _FAQsSection extends StatelessWidget {
-  const _FAQsSection();
+class FAQsSection extends StatelessWidget {
+  const FAQsSection();
 
   @override
   Widget build(BuildContext context) {
@@ -718,10 +806,13 @@ class _FAQTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
+      elevation: 1.5,
       margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16.0),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         title: Text(
           question,
           style: const TextStyle(
@@ -730,11 +821,11 @@ class _FAQTile extends StatelessWidget {
           ),
         ),
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Text(
-              answer,
-              style: TextStyle(color: Colors.grey[700]),
+          Text(
+            answer,
+            style: TextStyle(
+              color: Colors.grey[700],
+              height: 1.3,
             ),
           ),
         ],
@@ -743,49 +834,67 @@ class _FAQTile extends StatelessWidget {
   }
 }
 
-class _AboutUsSection extends StatelessWidget {
-  const _AboutUsSection();
+// --- ABOUT US ---
+class AboutUsSection extends StatelessWidget {
+  const AboutUsSection();
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      elevation: 3,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(15.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Expanded(
-              flex: 2,
-              child: Text(
-                'KuCognition is an AI-powered health monitoring app designed to provide high-resolution nail image analysis. Using advanced image processing and deep learning, our technology detects early signs of skin/nail conditions, vitamin deficiencies, edema, and infections — simply by scanning your nails.\n\nOur mission is to make preventive health care readily accessible by turning an everyday observation into a meaningful, proactive health step.',
-                style: TextStyle(fontSize: 14),
+        // ⬅️ balik sa all(16) para may white space sa right
+        padding: const EdgeInsets.all(16.0),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 📄 Text – left side
+              const Expanded(
+                flex: 3,
+                child: Text(
+                  'KuCognition is an AI-powered health monitoring app designed to provide high-resolution nail image analysis. Using advanced image processing and deep learning, our technology detects early signs of skin/nail conditions, vitamin deficiencies, edema, and infections — simply by scanning your nails.\n\nOur mission is to make preventive health care readily accessible by turning an everyday observation into a meaningful, proactive health step.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.3,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              flex: 1,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  'https://placehold.co/100x150/75A2DB/FFFFFF?text=Hand',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 150,
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: Text(
-                        "Hand Image",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12),
-                      ),
+
+              const SizedBox(width: 12),
+
+              // 🖼 Right side: gradient background + inner white padding
+              Expanded(
+                flex: 2,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFFF5F8FF), // very soft blue
+                        Color(0xFFE3EDFF),
+                      ],
+                    ),
+                  ),
+                  // white space sa loob bago yung image
+                  padding: const EdgeInsets.all(6),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.asset(
+                      'assets/images/aboutushand.jpg',
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
