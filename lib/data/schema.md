@@ -1,5 +1,7 @@
 ```mermaid
 erDiagram
+  direction LR
+
   AuthUser {
     string uid PK
     string email
