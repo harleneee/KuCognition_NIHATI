@@ -174,7 +174,13 @@ class _ScanPageState extends State<ScanPage> {
       'timestamp': Timestamp.now(),   // match UploadedPage style
     });
 
-    debugPrint('✅ History saved for camera scan.');
+    // ✅ INCREMENT totalScans after successful history write
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .set({'totalScans': FieldValue.increment(1)}, SetOptions(merge: true));
+
+    debugPrint('✅ History saved for camera scan & totalScans incremented.');
   }
 
   // =====================================================================

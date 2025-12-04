@@ -157,7 +157,13 @@ class _UploadedPageState extends State<UploadedPage> {
             'timestamp': Timestamp.now(), // ✅ match ScanPage style
           });
 
-          debugPrint('✅ History saved for upload scan.');
+          // ✅ INCREMENT totalScans after successful history write
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({'totalScans': FieldValue.increment(1)}, SetOptions(merge: true));
+
+          debugPrint('✅ History saved for upload scan & totalScans incremented.');
         } catch (e) {
           debugPrint('❌ Error saving upload history to Firestore: $e');
           ScaffoldMessenger.of(context).showSnackBar(

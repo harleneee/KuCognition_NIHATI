@@ -3,6 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
+// ✅ image picker + Supabase
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -14,6 +19,10 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? userData;
   bool isLoading = true;
   bool isAboutSelected = true;
+
+  // ✅ state for avatar upload
+  final ImagePicker _picker = ImagePicker();
+  bool _uploadingAvatar = false;
 
   @override
   void initState() {
@@ -66,7 +75,6 @@ class _ProfilePageState extends State<ProfilePage> {
       String lastScan = "No scans yet";
 
       if (historySnap.docs.isNotEmpty) {
-        // last scan = most recent doc
         final lastDoc =
             historySnap.docs.first.data() as Map<String, dynamic>? ?? {};
         final String lastLabel =
@@ -81,7 +89,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
         lastScan = datePart.isNotEmpty ? "$lastLabel • $datePart" : lastLabel;
 
-        // compute most common predictionLabel
         final Map<String, int> counts = {};
         for (final d in historySnap.docs) {
           final m = d.data() as Map<String, dynamic>? ?? {};
@@ -126,6 +133,88 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  // ✅ Pick image, upload to Supabase (history bucket), write URL to Firestore, update UI
+  Future<void> _pickAndUploadProfileImage() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final XFile? picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+
+      setState(() => _uploadingAvatar = true);
+
+      final bytes = await File(picked.path).readAsBytes();
+
+      // infer mime from extension
+      String ext = picked.path.split('.').last.toLowerCase();
+      String contentType = switch (ext) {
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        _ => 'image/jpeg',
+      };
+
+      // store under user's folder in the existing 'history' bucket
+      final storagePath =
+          '${user.uid}/profile_${DateTime.now().millisecondsSinceEpoch}.$ext';
+
+      final supabase = Supabase.instance.client;
+
+      await supabase.storage.from('history').uploadBinary(
+            storagePath,
+            bytes,
+            fileOptions: FileOptions(
+              upsert: true,
+              contentType: contentType,
+            ),
+          );
+
+      final publicUrl =
+          supabase.storage.from('history').getPublicUrl(storagePath);
+
+      // Save URL to Firestore so it persists across sessions
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set(
+        {
+          'profileImageUrl': publicUrl,
+          'profileImagePath': storagePath, // for future delete/replace
+          'profileUpdatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+
+      // Update local state immediately
+      setState(() {
+        userData = {
+          ...?userData,
+          'profileImageUrl': publicUrl,
+        };
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile photo updated.')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Avatar upload error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not update profile photo: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
+
   void _logout() async {
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
@@ -143,109 +232,133 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final data = userData ?? {};
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFEAF5FD),
-      appBar: AppBar(
+    // ✅ Intercept system back to always go straight to dashboard (and clear stack)
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/dashboard',
+          (route) => false,
+        );
+        return false;
+      },
+      child: Scaffold(
         backgroundColor: const Color(0xFFEAF5FD),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF001372)),
-          onPressed: () => Navigator.of(context).maybePop(),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFEAF5FD),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF001372)),
+            // ✅ Back button: also go straight to dashboard and clear stack
+            onPressed: () => Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/dashboard',
+              (route) => false,
+            ),
+          ),
+          centerTitle: true,
+          title: const Text(""),
         ),
-        centerTitle: true,
-        title: const Text(""),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _aboutHistoryTabs(),
-
-            const SizedBox(height: 24),
-
-            if (isAboutSelected) ...[
-              _profileHeaderCard(data),
-
-              const SizedBox(height: 18),
-
-              _editProfileButton(),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _aboutHistoryTabs(),
 
               const SizedBox(height: 24),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: _topCard(
-                      "Total Scans",
-                      (data["totalScans"] ?? 0).toString(),
-                      height: 120,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: _topCard(
-                      "Most Common Result",
-                      data["mostCommonResult"] ?? "None yet",
-                      height: 120,
-                    ),
-                  ),
-                ],
-              ),
+              if (isAboutSelected) ...[
+                _profileHeaderCard(data),
 
-              const SizedBox(height: 14),
+                const SizedBox(height: 18),
 
-              _topCard(
-                "Last Scan",
-                data["lastScan"] ?? "No scans yet",
-                height: 110,
-                isFullWidth: true,
-              ),
+                _editProfileButton(),
 
-              const SizedBox(height: 40),
+                const SizedBox(height: 24),
 
-              _logoutButton(),
-            ] else ...[
-              const SizedBox(height: 40),
-              Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 10,
-                      offset: Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                // NEW tiles
+                Row(
                   children: [
-                    Text(
-                      "Scan History",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF001372),
+                    Expanded(
+                      child: _metricCard(
+                        label: "TOTAL SCANS",
+                        value: (data["totalScans"] ?? 0).toString(),
+                        isNumber: true, // big centered number
                       ),
                     ),
-                    SizedBox(height: 10),
-                    Text(
-                      "No scans yet.\nYour past nail scans will appear here.",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF6D777F),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _metricCard(
+                        label: "MOST COMMON RESULT",
+                        value:
+                            (data["mostCommonResult"] ?? "None yet").toString(),
+                        isNumber: false, // wrap to two lines
                       ),
                     ),
                   ],
                 ),
-              ),
+
+                const SizedBox(height: 14),
+
+                _lastScanCard(
+                  title: "LAST SCAN",
+                  line1: (data["lastScan"] ?? "No scans yet")
+                      .toString()
+                      .split(" • ")
+                      .first,
+                  line2: (() {
+                    final parts =
+                        (data["lastScan"] ?? "").toString().split(" • ");
+                    return parts.length > 1 ? parts.last : null;
+                  })(),
+                ),
+
+                const SizedBox(height: 40),
+
+                _logoutButton(),
+              ] else ...[
+                const SizedBox(height: 40),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 10,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Scan History",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF001372),
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        "No scans yet.\nYour past nail scans will appear here.",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF6D777F),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -275,7 +388,8 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(width: 4),
           GestureDetector(
             onTap: () {
-              Navigator.pushNamed(context, '/history');
+              // ✅ Replace current route with History to avoid stacking
+              Navigator.pushReplacementNamed(context, '/history');
             },
             child: _tabChip("HISTORY", isActive: !isAboutSelected),
           ),
@@ -343,10 +457,50 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: Colors.white,
-            child: avatarChild,
+          // ✅ Avatar + small camera button overlay
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.white,
+                child: avatarChild,
+              ),
+              Positioned(
+                bottom: 0,
+                right: 2,
+                child: InkWell(
+                  onTap: _uploadingAvatar ? null : _pickAndUploadProfileImage,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3B87D2),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: _uploadingAvatar
+                        ? const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Icon(Icons.photo_camera,
+                            color: Colors.white, size: 18),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: 26),
           Expanded(
@@ -464,16 +618,154 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // ---------- UPDATED metric tile (no ellipsis, auto-fit) ----------
+  Widget _metricCard({
+    required String label,
+    required String value,
+    bool isNumber = false,
+  }) {
+    return Container(
+      height: 120,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE8EEF5)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14001372),
+            blurRadius: 10,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              letterSpacing: 1.1,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF9EACB7),
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Value area
+          Expanded(
+            child: isNumber
+                // Big centered number
+                ? Center(
+                    child: Text(
+                      value,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF001372),
+                      ),
+                    ),
+                  )
+                // Long single-word labels auto-scale to fit width (no ellipsis)
+                : Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        value,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.visible,
+                        textWidthBasis: TextWidthBasis.longestLine,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF001372),
+                        ),
+                      ),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _lastScanCard({
+    required String title,
+    required String line1,
+    String? line2,
+  }) {
+    return Container(
+      height: 110,
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE8EEF5)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14001372),
+            blurRadius: 10,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 11,
+              letterSpacing: 1.1,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF9EACB7),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            line1,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 16.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF001372),
+            ),
+          ),
+          if (line2 != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              line2!,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF6D777F),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // (Old _topCard kept for compatibility; unused now)
   Widget _topCard(
     String title,
     String value, {
     double height = 120,
     bool isFullWidth = false,
   }) {
+    final bool isNumberOnly = RegExp(r'^\d+$').hasMatch(value.trim());
+
     return Container(
       height: height,
       width: isFullWidth ? double.infinity : null,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -484,32 +776,55 @@ class _ProfilePageState extends State<ProfilePage> {
             offset: Offset(0, 6),
           ),
         ],
+        border: Border.all(color: const Color(0xFFE8EEF5)),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF6D777F),
-              ),
+          Text(
+            title.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 11,
+              letterSpacing: 1.1,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF9EACB7),
             ),
           ),
-          const SizedBox(height: 6),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF9EACB7),
-              ),
-            ),
+
+          // VALUE
+          Expanded(
+            child: isNumberOnly
+                ? Center(
+                    child: Text(
+                      value,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF001372),
+                      ),
+                    ),
+                  )
+                : Align(
+                    alignment: Alignment.centerLeft,
+                    // Shrink LONG single words to fit on ONE line — no ellipsis.
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        value,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.visible,
+                        textWidthBasis: TextWidthBasis.longestLine,
+                        style: const TextStyle(
+                          fontSize: 20, // will scale down as needed
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF001372),
+                        ),
+                      ),
+                    ),
+                  ),
           ),
         ],
       ),

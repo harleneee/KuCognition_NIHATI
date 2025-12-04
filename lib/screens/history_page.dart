@@ -146,7 +146,7 @@ class HistoryPage extends StatelessWidget {
 }
 
 /// Top ABOUT / HISTORY pill, copied style from Profile.
-/// Here HISTORY looks active, ABOUT just pops back to previous screen.
+/// HISTORY is active; ABOUT always routes back to Profile.
 class _HistoryTabsHeader extends StatelessWidget {
   const _HistoryTabsHeader();
 
@@ -171,8 +171,8 @@ class _HistoryTabsHeader extends StatelessWidget {
           children: [
             GestureDetector(
               onTap: () {
-                // Go back to whatever screen (likely ProfilePage / ABOUT)
-                Navigator.of(context).maybePop();
+                // ✅ Fix: always go to Profile instead of maybePop()
+                Navigator.pushReplacementNamed(context, '/profile');
               },
               child: _tabChip("ABOUT", isActive: false),
             ),
