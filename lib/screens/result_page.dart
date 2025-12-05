@@ -1,6 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 
+// ✅ NEW imports for PDF export
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
+
 class ResultPage extends StatelessWidget {
   const ResultPage({super.key});
 
@@ -322,6 +328,129 @@ class ResultPage extends StatelessWidget {
       );
     }
 
+    // ✅ NEW: PDF download helper, using the same data as the screen
+    Future<void> _downloadPdf() async {
+      final pdf = pw.Document();
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(24),
+          build: (pw.Context ctx) => [
+            pw.Text(
+              'AI Nail Scan Result',
+              style: pw.TextStyle(
+                fontSize: 22,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 12),
+            pw.Text('Detected Condition: $label'),
+            pw.Text('Confidence: $confString'),
+            pw.Text('Risk Level: $risk'),
+            pw.SizedBox(height: 16),
+            pw.Text(
+              'Scanned Nail Description',
+              style: pw.TextStyle(
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 6),
+            if (scannedColor != null && scannedColor.isNotEmpty) ...[
+              pw.Text('• Color',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Text(scannedColor),
+              pw.SizedBox(height: 6),
+            ],
+            if (scannedTexture != null && scannedTexture.isNotEmpty) ...[
+              pw.Text('• Texture & Growth',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Text(scannedTexture),
+              pw.SizedBox(height: 6),
+            ],
+            pw.SizedBox(height: 14),
+            pw.Text(
+              'Possible Sign of Underlying Condition',
+              style: pw.TextStyle(
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 6),
+            if (underlyingIntro != null && underlyingIntro.isNotEmpty)
+              pw.Text(underlyingIntro),
+            pw.SizedBox(height: 6),
+            if (underlyingMetabolic != null &&
+                underlyingMetabolic.isNotEmpty)
+              pw.Bullet(text: underlyingMetabolic),
+            if (underlyingImmune != null && underlyingImmune.isNotEmpty)
+              pw.Bullet(text: underlyingImmune),
+            if (underlyingNutrient != null &&
+                underlyingNutrient.isNotEmpty)
+              pw.Bullet(text: underlyingNutrient),
+            if (underlyingOrgan != null && underlyingOrgan.isNotEmpty)
+              pw.Bullet(text: underlyingOrgan),
+            if (nextSteps != null && nextSteps.isNotEmpty) ...[
+              pw.SizedBox(height: 14),
+              pw.Text(
+                'Next Steps & Recommendations',
+                style: pw.TextStyle(
+                  fontSize: 16,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 6),
+              pw.Text(nextSteps),
+            ],
+            if (whyMatters != null && whyMatters.isNotEmpty) ...[
+              pw.SizedBox(height: 14),
+              pw.Text(
+                'Why This Matters',
+                style: pw.TextStyle(
+                  fontSize: 16,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 6),
+              pw.Text(whyMatters),
+            ],
+            pw.SizedBox(height: 18),
+            pw.Text(
+              'This is AI pattern analysis — NOT a medical diagnosis.',
+              style: pw.TextStyle(
+                fontSize: 10,
+                color: PdfColors.red,
+              ),
+            ),
+          ],
+        ),
+      );
+
+      try {
+        final bytes = await pdf.save();
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File(
+          '${dir.path}/kucognition_nail_result_${DateTime.now().millisecondsSinceEpoch}.pdf',
+        );
+        await file.writeAsBytes(bytes);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PDF report saved. Opening…'),
+          ),
+        );
+
+        await OpenFile.open(file.path);
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate PDF: $e'),
+          ),
+        );
+      }
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFEAF5FD),
       appBar: AppBar(
@@ -500,14 +629,48 @@ class ResultPage extends StatelessWidget {
 
             const SizedBox(height: 26),
 
-            /// SINGLE ACTION BUTTON → Dashboard
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => goToDashboard(context),
-                style: _buttonStyle(primary: const Color(0xFF3B87D2)),
-                child: const Text("Done"),
-              ),
+            /// ACTION BUTTONS → Download + Dashboard
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _downloadPdf,
+                    icon: const Icon(Icons.download_rounded, size: 18),
+                    label: const Text('Download PDF'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF3B87D2),
+                      side: const BorderSide(
+                        color: Color(0xFF3B87D2),
+                        width: 1.2,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 13,
+                        horizontal: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => goToDashboard(context),
+                      style: _buttonStyle(primary: const Color(0xFF3B87D2)),
+                      child: const Text(
+                        "Done",
+                        style: TextStyle(
+                          color: Colors.white, // ✅ make sure it’s visible
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 16),
