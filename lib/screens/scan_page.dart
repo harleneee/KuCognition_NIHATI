@@ -65,7 +65,9 @@ class _ScanPageState extends State<ScanPage> {
       final String storageFileName =
           '${user.uid}/${DateTime.now().millisecondsSinceEpoch}_$fileName';
 
-      await supabase.storage.from('history').uploadBinary(
+      await supabase.storage
+          .from('history')
+          .uploadBinary(
             storageFileName,
             bytes,
             fileOptions: const FileOptions(
@@ -74,8 +76,9 @@ class _ScanPageState extends State<ScanPage> {
             ),
           );
 
-      final publicUrl =
-          supabase.storage.from('history').getPublicUrl(storageFileName);
+      final publicUrl = supabase.storage
+          .from('history')
+          .getPublicUrl(storageFileName);
 
       debugPrint('✅ Supabase upload success (scan). URL: $publicUrl');
       return publicUrl;
@@ -98,8 +101,8 @@ class _ScanPageState extends State<ScanPage> {
 
       // ⭐ make sure types are clean
       final String label = result['label'] as String;
-      final double confidence =
-          (result['confidence'] as num).toDouble(); // handles int/double
+      final double confidence = (result['confidence'] as num)
+          .toDouble(); // handles int/double
 
       // 1) Upload image to Supabase (if user logged in)
       final String? imageUrl = await _uploadToSupabase(file.path);
@@ -112,10 +115,7 @@ class _ScanPageState extends State<ScanPage> {
       );
 
       // 3) Show popup + go to ResultPage
-      _showResultPopup(
-        label: label,
-        confidence: confidence,
-      );
+      _showResultPopup(label: label, confidence: confidence);
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -178,10 +178,9 @@ class _ScanPageState extends State<ScanPage> {
     });
 
     // ✅ INCREMENT totalScans after successful history write
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .set({'totalScans': FieldValue.increment(1)}, SetOptions(merge: true));
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+      'totalScans': FieldValue.increment(1),
+    }, SetOptions(merge: true));
 
     debugPrint('✅ History saved for camera scan & totalScans incremented.');
   }
@@ -346,12 +345,16 @@ class _ScanPageState extends State<ScanPage> {
 
         return Center(
           child: SlideTransition(
-            position: Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              ),
-            ),
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, 0.12),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
             child: FadeTransition(
               opacity: CurvedAnimation(
                 parent: animation,
@@ -359,8 +362,13 @@ class _ScanPageState extends State<ScanPage> {
               ),
               child: Dialog(
                 backgroundColor: Colors.transparent,
-                insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                insetPadding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 24,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
                 child: Container(
                   width: size.width * 0.9,
                   constraints: const BoxConstraints(maxHeight: 600),
@@ -377,9 +385,10 @@ class _ScanPageState extends State<ScanPage> {
                     ],
                   ),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header row
+                      // ---------------------- HEADER ----------------------
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -436,221 +445,244 @@ class _ScanPageState extends State<ScanPage> {
 
                       const SizedBox(height: 16),
 
-                      // Small pill / label
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEDF2FF),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: const Text(
-                          'Before you take a photo',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF3B87D2),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Guidelines list
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(height: 4),
-                          _GuidelineRow(
-                            icon: Icons.wb_sunny_outlined,
-                            spans: [
-                              TextSpan(
-                                text: 'Use natural light near a window; ',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF4E5A65),
-                                  height: 1.4,
+                      // ---------------------- SCROLLABLE CONTENT ----------------------
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Blue pill label
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEDF2FF),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: const Text(
+                                  'Before you take a photo',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF3B87D2),
+                                  ),
                                 ),
                               ),
-                              TextSpan(
-                                text: 'avoid colored lights.',
+
+                              const SizedBox(height: 12),
+
+                              // GUIDELINES LIST (unchanged)
+                              const Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(height: 4),
+                                  _GuidelineRow(
+                                    icon: Icons.wb_sunny_outlined,
+                                    spans: [
+                                      TextSpan(
+                                        text:
+                                            'Use natural light near a window; ',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w400,
+                                          color: Color(0xFF4E5A65),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: 'avoid colored lights.',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFFDC2626),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  SizedBox(height: 6),
+                                  _GuidelineRow(
+                                    icon: Icons.flash_off_outlined,
+                                    spans: [
+                                      TextSpan(
+                                        text: 'Turn off flash',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF111827),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text:
+                                            '; no harsh reflections or glare.',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w400,
+                                          color: Color(0xFF4E5A65),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  SizedBox(height: 6),
+                                  _GuidelineRow(
+                                    icon: Icons.crop_free,
+                                    spans: [
+                                      TextSpan(
+                                        text:
+                                            'Keep the nail flat to the camera, filling ',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w400,
+                                          color: Color(0xFF4E5A65),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: '70–80%',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF111827),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: ' of the frame.',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w400,
+                                          color: Color(0xFF4E5A65),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 6),
+                                  _GuidelineRow(
+                                    icon: Icons.brush_outlined,
+                                    spans: [
+                                      TextSpan(
+                                        text: 'Remove polish; ',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w400,
+                                          color: Color(0xFF4E5A65),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: 'wipe the nail dry/clean.',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF111827),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  SizedBox(height: 6),
+                                  _GuidelineRow(
+                                    icon: Icons.center_focus_strong_outlined,
+                                    spans: [
+                                      TextSpan(
+                                        text: 'Hold still ',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF111827),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text:
+                                            'for 1–2 seconds; lock autofocus.',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w400,
+                                          color: Color(0xFF4E5A65),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  SizedBox(height: 6),
+                                  _GuidelineRow(
+                                    icon: Icons.layers_outlined,
+                                    spans: [
+                                      TextSpan(
+                                        text: 'Use a ',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w400,
+                                          color: Color(0xFF4E5A65),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text:
+                                            'plain, non-reflective background',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF111827),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: ' (paper/towel).',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w400,
+                                          color: Color(0xFF4E5A65),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              const Text(
+                                'Example photo',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFFDC2626), // red warning
-                                  height: 1.4,
+                                  color: Color(0xFF475569),
                                 ),
                               ),
-                            ],
-                          ),
-                          SizedBox(height: 6),
-                          _GuidelineRow(
-                            icon: Icons.flash_off_outlined,
-                            spans: [
-                              TextSpan(
-                                text: 'Turn off flash',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF111827),
-                                  height: 1.4,
-                                ),
-                              ),
-                              TextSpan(
-                                text: '; no harsh reflections or glare.',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF4E5A65),
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 6),
-                          _GuidelineRow(
-                            icon: Icons.crop_free,
-                            spans: [
-                              TextSpan(
-                                text:
-                                    'Keep the nail flat to the camera, filling ',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF4E5A65),
-                                  height: 1.4,
-                                ),
-                              ),
-                              TextSpan(
-                                text: '70–80%',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF111827),
-                                  height: 1.4,
-                                ),
-                              ),
-                              TextSpan(
-                                text: ' of the frame.',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF4E5A65),
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 6),
-                          _GuidelineRow(
-                            icon: Icons.brush_outlined,
-                            spans: [
-                              TextSpan(
-                                text: 'Remove polish; ',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF4E5A65),
-                                  height: 1.4,
-                                ),
-                              ),
-                              TextSpan(
-                                text: 'wipe the nail dry/clean.',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF111827),
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 6),
-                          _GuidelineRow(
-                            icon: Icons.center_focus_strong_outlined,
-                            spans: [
-                              TextSpan(
-                                text: 'Hold still ',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF111827),
-                                  height: 1.4,
-                                ),
-                              ),
-                              TextSpan(
-                                text: 'for 1–2 seconds; lock autofocus.',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF4E5A65),
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 6),
-                          _GuidelineRow(
-                            icon: Icons.layers_outlined,
-                            spans: [
-                              TextSpan(
-                                text: 'Use a ',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF4E5A65),
-                                  height: 1.4,
-                                ),
-                              ),
-                              TextSpan(
-                                text: 'plain, non-reflective background',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF111827),
-                                  height: 1.4,
-                                ),
-                              ),
-                              TextSpan(
-                                text: ' (paper/towel).',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF4E5A65),
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                              const SizedBox(height: 6),
 
-                      const SizedBox(height: 10),
-
-                      const Text(
-                        'Example photo',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF475569),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 110, // 🔽 was 150 – shorter to avoid overflow
-                          child: Image.asset(
-                            'assets/images/sampleimage.png', // same path
-                            fit: BoxFit.cover,
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: 120,
+                                  child: Image.asset(
+                                    'assets/images/sampleimage.png',
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
 
                       const SizedBox(height: 12),
 
+                      // ---------------------- BUTTON AT BOTTOM ----------------------
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -661,10 +693,8 @@ class _ScanPageState extends State<ScanPage> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                             elevation: 2,
-                            shadowColor: Colors.black26,
                           ),
                           child: const Text(
                             'Got it!',
@@ -746,7 +776,10 @@ class _ScanPageState extends State<ScanPage> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFF4F6FA),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFF3B87D2), width: 3),
+                    border: Border.all(
+                      color: const Color(0xFF3B87D2),
+                      width: 3,
+                    ),
                   ),
                   child: _capturedImage == null
                       ? const SizedBox()
@@ -772,7 +805,9 @@ class _ScanPageState extends State<ScanPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       border: Border.all(
-                          color: const Color(0xFF3B87D2), width: 1.2),
+                        color: const Color(0xFF3B87D2),
+                        width: 1.2,
+                      ),
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: const Row(
@@ -786,8 +821,7 @@ class _ScanPageState extends State<ScanPage> {
                           ),
                         ),
                         SizedBox(width: 6),
-                        Icon(Icons.upload,
-                            color: Color(0xFF001372), size: 18),
+                        Icon(Icons.upload, color: Color(0xFF001372), size: 18),
                       ],
                     ),
                   ),
@@ -804,8 +838,10 @@ class _ScanPageState extends State<ScanPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border:
-                          Border.all(width: 3, color: const Color(0xFF3B87D2)),
+                      border: Border.all(
+                        width: 3,
+                        color: const Color(0xFF3B87D2),
+                      ),
                       boxShadow: const [
                         BoxShadow(
                           color: Colors.black12,
@@ -858,8 +894,7 @@ class _ScanPageState extends State<ScanPage> {
                       const Expanded(
                         child: Text(
                           "Explore nail health indicators and their meanings.",
-                          style:
-                              TextStyle(fontSize: 13, color: Colors.white70),
+                          style: TextStyle(fontSize: 13, color: Colors.white70),
                         ),
                       ),
                       const Text(
@@ -887,10 +922,7 @@ class _GuidelineRow extends StatelessWidget {
   final IconData icon;
   final List<TextSpan> spans;
 
-  const _GuidelineRow({
-    required this.icon,
-    required this.spans,
-  });
+  const _GuidelineRow({required this.icon, required this.spans});
 
   @override
   Widget build(BuildContext context) {
@@ -899,17 +931,11 @@ class _GuidelineRow extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 2),
-          child: Icon(
-            icon,
-            size: 18,
-            color: const Color(0xFF3B87D2),
-          ),
+          child: Icon(icon, size: 18, color: const Color(0xFF3B87D2)),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: RichText(
-            text: TextSpan(children: spans),
-          ),
+          child: RichText(text: TextSpan(children: spans)),
         ),
       ],
     );
