@@ -14,8 +14,13 @@ class AppColors {
 
 class ChatbotPage extends StatefulWidget {
   final String initialPrompt;
+  final String? initialCondition; // ✅ NEW
 
-  const ChatbotPage({super.key, required this.initialPrompt});
+  const ChatbotPage({
+    super.key,
+    required this.initialPrompt,
+    this.initialCondition,       // ✅ NEW
+  });
 
   @override
   State<ChatbotPage> createState() => _ChatbotPageState();
@@ -54,11 +59,11 @@ class _ChatbotPageState extends State<ChatbotPage> {
     // ✅ NEW: init speech instance
     _speech = stt.SpeechToText();
 
-    // If Dashboard passes an initial question, send it directly to KuBot.
+    // If Dashboard/LearnMore passes an initial question, send it directly to KuBot.
     if (widget.initialPrompt.trim().isNotEmpty) {
       final initial = widget.initialPrompt.trim();
       _addUserMessage(initial);
-      _sendToKuBot(initial);
+      _sendToKuBot(initial, condition: widget.initialCondition); // ✅ pass condition
     } else {
       _addBotMessage(
         'Hi, I\'m KuBot. I can help you understand nail conditions, '
@@ -99,7 +104,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
   }
 
   /// Call FastAPI KuBot backend through ChatbotAPI.
-  Future<void> _sendToKuBot(String text) async {
+  Future<void> _sendToKuBot(String text, {String? condition}) async { // ✅ updated
     setState(() {
       _isSending = true;
       _isBotTyping = true; // show typing bubble
@@ -107,7 +112,10 @@ class _ChatbotPageState extends State<ChatbotPage> {
     _scrollToBottom(); // make sure we scroll down to see it
 
     // Start the request
-    final futureResponse = ChatbotAPI.sendMessage(text);
+    final futureResponse = ChatbotAPI.sendMessage(
+      text,
+      condition: condition, // ✅ pass condition through
+    );
 
     // Wait for the actual response
     final result = await futureResponse;
@@ -134,13 +142,13 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
     _messageController.clear();
     _addUserMessage(text);
-    _sendToKuBot(text);
+    _sendToKuBot(text); // normal user messages → no condition
   }
 
   void _handleQuickPrompt(String prompt) {
     if (_isSending) return;
     _addUserMessage(prompt);
-    _sendToKuBot(prompt);
+    _sendToKuBot(prompt); // quick prompts → no condition
   }
 
   // ✅ NEW: toggle mic listening and push transcript into the text field

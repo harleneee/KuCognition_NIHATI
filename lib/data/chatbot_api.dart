@@ -6,14 +6,22 @@ class ChatbotAPI {
   // Android emulator -> PC localhost
   static const String baseUrl = "http://10.0.2.2:8001";
 
-  static Future<Map<String, dynamic>> sendMessage(String message) async {
+  static Future<Map<String, dynamic>> sendMessage(
+    String message, {
+    String? condition, // ✅ NEW optional param
+  }) async {
     final Uri url = Uri.parse('$baseUrl/predict_intent');
+
+    final Map<String, dynamic> body = {
+      'message': message,
+      if (condition != null) 'condition': condition, // ✅ include if present
+    };
 
     try {
       final response = await http.post(
         url,
         headers: const {'Content-Type': 'application/json'},
-        body: jsonEncode({'message': message}),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200) {

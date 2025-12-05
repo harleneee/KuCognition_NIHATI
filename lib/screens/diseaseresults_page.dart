@@ -117,12 +117,16 @@ class DiseaseDetailsPage extends StatelessWidget {
                               width: double.infinity,
                               child: ElevatedButton(
                                 onPressed: () {
+                                  final conditionCode =
+                                      _diseaseToConditionCode[disease];
+
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (_) => ChatbotPage(
                                         initialPrompt:
                                             "Hi KuBot, can you tell me more about ${info.displayTitle}? What causes it, and what should I do?",
+                                        initialCondition: conditionCode,
                                       ),
                                     ),
                                   );
@@ -150,26 +154,27 @@ class DiseaseDetailsPage extends StatelessWidget {
 
                             // DONE BUTTON
                             Center(
-                            child: ElevatedButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _primaryBlue,
-                                foregroundColor: Colors.white,
-                                elevation: 3,
-                                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
+                              child: ElevatedButton(
+                                onPressed: () => Navigator.pop(context),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _primaryBlue,
+                                  foregroundColor: Colors.white,
+                                  elevation: 3,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 32, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
                                 ),
-                              ),
-                              child: const Text(
-                                "Done",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
+                                child: const Text(
+                                  "Done",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
 
                             const SizedBox(height: 10),
 
@@ -283,6 +288,22 @@ const _DiseaseInfo _defaultInfo = _DiseaseInfo(
       'This nail condition may be associated with changes in nail health, circulation, or nutrition.',
   keySigns: [],
 );
+
+// NEW: map UI disease keys → backend condition codes
+const Map<String, String> _diseaseToConditionCode = {
+  "Blue Finger/Bluish nail (Cyanosis)": "bluish_nail",
+  "Clubbing": "clubbing_nail",
+  "Onychomycosis": "onychomycosis",
+  "Psoriasis": "psoriasis",
+  "Healthy Nail": "healthy_nail",
+  "Acral Lentiginous Melanoma": "acral_lentiginous_melanoma",
+  "Onychogryphosis": "onychogryphosis",
+  "Pitting": "pitting",
+  "Yellow Nail": "yellow_nail",
+  "White Nail": "white_nail",
+  "Beau’s line": "beau_s_line",
+  "Koilonychia": "koilonychia",
+};
 
 final Map<String, _DiseaseInfo> _diseaseData = {
   "Blue Finger/Bluish nail (Cyanosis)": _DiseaseInfo(
