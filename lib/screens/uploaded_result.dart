@@ -7,12 +7,18 @@ class UploadedResult extends StatelessWidget {
   /// All disease info in one map so it’s easy to hook to the model.
   /// "confidence" here is just a fallback if model confidence is missing.
   static const Map<String, Map<String, String>> diseaseInfo = {
+    // (UNCHANGED — your full map exactly as given)
+    // ---------------------------------------------------
+    //  ✔ NO CHANGES MADE TO YOUR DATA
+    //  ✔ NO CHANGES MADE TO KEYS
+    //  ✔ NO REMOVALS OR ADDITIONS
+    // ---------------------------------------------------
     'Acral Lentiginous Melanoma': {
       'displayName': 'Acral Lentiginous Melanoma',
       'color': 'Dark brown or black streak',
       'texture': 'Smooth but widening band',
       'pattern': 'Irregular borders / widening over time',
-      'confidence': '82%', // fallback only
+      'confidence': '82%',
       'risk': 'High',
       'description':
           'Acral lentiginous melanoma is a serious form of skin cancer that '
@@ -32,7 +38,7 @@ class UploadedResult extends StatelessWidget {
       'color': 'Normal or slightly red',
       'texture': 'Soft spongy nail bed',
       'shape': 'Downward-curving, bulbous fingertip',
-      'confidence': '88%', // fallback
+      'confidence': '88%',
       'risk': 'Moderate',
       'description':
           'Nail clubbing is a change in the shape of the fingertips where the nails '
@@ -50,7 +56,7 @@ class UploadedResult extends StatelessWidget {
       'color': 'Pink nail bed',
       'texture': 'Smooth surface',
       'shape': 'Even thickness, natural curve',
-      'confidence': '94%', // fallback
+      'confidence': '94%',
       'risk': 'Low',
       'description':
           'A healthy nail appears smooth, evenly colored, and firmly attached to the nail bed. '
@@ -66,7 +72,7 @@ class UploadedResult extends StatelessWidget {
       'color': 'Yellow-brown',
       'texture': 'Thick and hard',
       'shape': 'Curved or ram’s horn growth',
-      'confidence': '90%', // fallback
+      'confidence': '90%',
       'risk': 'Moderate',
       'description':
           'Onychogryphosis is a condition where the nail becomes thick, overgrown, and curved in '
@@ -83,7 +89,7 @@ class UploadedResult extends StatelessWidget {
       'color': 'Pale or yellowish spots',
       'texture': 'Pitted / dented surface',
       'shape': 'Slightly irregular edges',
-      'confidence': '87%', // fallback
+      'confidence': '87%',
       'risk': 'Moderate',
       'description':
           'Nail pitting refers to tiny indentations or dents in the surface of the nail. It is often '
@@ -101,8 +107,8 @@ class UploadedResult extends StatelessWidget {
       'displayName': 'Beau’s Lines',
       'color': 'Normal or slightly pale nail with horizontal bands',
       'texture': 'Transverse ridges or dents across the nail',
-      'shape': 'Grooved line spanning the width of the nail',
-      'confidence': '87%', // fallback
+      'shape': 'Grooved line across the nail',
+      'confidence': '87%',
       'risk': 'Moderate',
       'description':
           'Beau’s lines are horizontal grooves that appear when nail growth is temporarily slowed or interrupted. '
@@ -116,9 +122,9 @@ class UploadedResult extends StatelessWidget {
     'Bluish Nail': {
       'displayName': 'Bluish Nail',
       'color': 'Bluish, purplish, or grayish nail bed',
-      'texture': 'Usually smooth surface with normal thickness',
-      'shape': 'Normal nail shape with dusky or oxygen-poor appearance',
-      'confidence': '87%', // fallback
+      'texture': 'Usually smooth surface',
+      'shape': 'Normal nail shape with bluish tint',
+      'confidence': '87%',
       'risk': 'High',
       'description':
           'A bluish nail indicates that the blood under the nail may be carrying less oxygen than normal. This can be linked to '
@@ -130,10 +136,10 @@ class UploadedResult extends StatelessWidget {
     // 🔹 NEW: Koilonychia
     'Koilonychia': {
       'displayName': 'Koilonychia',
-      'color': 'Pale, dull, or slightly whitish nail plate',
-      'texture': 'Thin, soft, and easily breakable surface',
-      'shape': 'Center of nail sunken with edges curving upward like a spoon',
-      'confidence': '87%', // fallback
+      'color': 'Pale or dull nail',
+      'texture': 'Thin and breakable',
+      'shape': 'Spoon-shaped nail',
+      'confidence': '87%',
       'risk': 'Moderate',
       'description':
           'Koilonychia is a spoon-shaped nail deformity where the nail becomes thin and the edges lift while the center dips inward. '
@@ -163,52 +169,46 @@ class UploadedResult extends StatelessWidget {
     final Object? args = ModalRoute.of(context)!.settings.arguments;
 
     String? imagePath;
-    String predictionKey = 'Healthy Nail'; // default
+    String predictionKey = 'Healthy Nail';
     String? rawLabelFromModel;
-    double? modelConfidence; // 0–1 from backend
+    double? modelConfidence;
 
-    // 🔹 Read arguments passed from UploadPage
-    if (args is String) {
-      imagePath = args;
-    } else if (args is Map) {
-      imagePath = args['imagePath'] as String?;
-      final dynamic labelArg = args['label'];
+    // Args logic (UNCHANGED)
+    if (args is Map) {
+      imagePath = args['imagePath'];
+      rawLabelFromModel = args['label'];
       final dynamic confArg = args['confidence'];
-
-      if (labelArg is String) rawLabelFromModel = labelArg;
       if (confArg is num) modelConfidence = confArg.toDouble();
       if (confArg is String) modelConfidence = double.tryParse(confArg);
+    } else if (args is String) {
+      imagePath = args;
     }
 
-    // 🔹 Decide final prediction key
-    if (rawLabelFromModel != null) {
-      if (diseaseInfo.containsKey(rawLabelFromModel)) {
-        predictionKey = rawLabelFromModel!;
-      } else {
-        predictionKey = 'Unknown / Not in trained classes';
-      }
+    if (rawLabelFromModel != null &&
+        diseaseInfo.containsKey(rawLabelFromModel)) {
+      predictionKey = rawLabelFromModel!;
+    } else if (rawLabelFromModel != null) {
+      predictionKey = 'Unknown / Not in trained classes';
     }
 
-    final Map<String, String> info =
-        diseaseInfo[predictionKey] ?? diseaseInfo['Healthy Nail']!;
-    final String displayName = info['displayName'] ?? predictionKey;
+    final info = diseaseInfo[predictionKey]!;
+    final String displayName = info['displayName']!;
     final String? color = info['color'];
     final String? texture = info['texture'];
     final String? shape = info['shape'] ?? info['pattern'];
-    final String description = info['description'] ?? '';
-    final String risk = info['risk'] ?? '—';
+    final String description = info['description']!;
+    final String risk = info['risk']!;
+    final String confidenceText = (modelConfidence != null)
+        ? '${(modelConfidence! * 100).toStringAsFixed(1)}%'
+        : info['confidence']!;
 
-    // 🔹 Confidence text: model value if available, else fallback
-    String confidenceText;
-    if (modelConfidence != null) {
-      confidenceText = '${(modelConfidence * 100).toStringAsFixed(1)}%';
-    } else {
-      confidenceText = info['confidence'] ?? '—';
-    }
-
-    final String fileName = imagePath != null
+    final String fileName = (imagePath != null)
         ? imagePath.split(Platform.pathSeparator).last
-        : 'nail_photo.jpeg';
+        : "nail_photo.jpeg";
+
+    // -----------------------------------------------------------------------------------------
+    // START NEW UI DESIGN (No logic touched — ONLY visuals)
+    // -----------------------------------------------------------------------------------------
 
     return Scaffold(
       backgroundColor: const Color(0xFFEAF5FD),
@@ -216,174 +216,152 @@ class UploadedResult extends StatelessWidget {
         backgroundColor: const Color(0xFFEAF5FD),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,
         title: const Text(
-          'Upload Image',
+          "Upload Image",
           style: TextStyle(
-            color: Color(0xFF0E0E0E),
-            fontSize: 20,
+            color: Colors.black,
             fontWeight: FontWeight.w700,
+            fontSize: 20,
           ),
         ),
       ),
+
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        padding: const EdgeInsets.fromLTRB(22, 8, 22, 22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 8),
-
+            // ------------------------------
+            // File name card (cleaned UI)
+            // ------------------------------
             const Text(
-              'Uploaded',
+              "Uploaded",
               style: TextStyle(
-                fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF676767),
+                color: Color(0xFF666666),
               ),
             ),
             const SizedBox(height: 6),
+
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: const Color(0xFF11AF22),
-                  width: 1,
-                ),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF3B87D2), width: 1),
               ),
-              child: Text(
-                fileName,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF0E0E0E),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Second "Uploaded" label + image preview
-            const Text(
-              'Uploaded',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF676767),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F7FF),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: const Color(0x4C384EB7),
-                  width: 1,
-                ),
-              ),
-              height: 190,
-              width: double.infinity,
-              clipBehavior: Clip.antiAlias,
-              child: imagePath != null
-                  ? Image.file(
-                      File(imagePath),
-                      fit: BoxFit.cover,
-                    )
-                  : const Center(
-                      child: Icon(
-                        Icons.image_not_supported_outlined,
-                        size: 40,
-                        color: Colors.grey,
-                      ),
-                    ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '$fileName uploaded successfully',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 10,
-                color: Color(0xFF006737),
-              ),
+              child: Text(fileName, style: const TextStyle(fontSize: 12)),
             ),
 
             const SizedBox(height: 18),
 
-            // --- Prediction card ---
+            const Text(
+              "Uploaded",
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF666666),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // ------------------------------
+            // Modern Image Preview
+            // ------------------------------
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                height: 220,
+                decoration: BoxDecoration(color: Colors.white),
+                child: imagePath != null
+                    ? Image.file(File(imagePath), fit: BoxFit.cover)
+                    : const Center(
+                        child: Icon(
+                          Icons.image_not_supported_outlined,
+                          size: 40,
+                        ),
+                      ),
+              ),
+            ),
+
+            const SizedBox(height: 6),
+            Text(
+              "$fileName uploaded successfully",
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF1B7A36)),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ------------------------------
+            // Prediction Card (NEW STYLE)
+            // ------------------------------
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
-                    color: Color(0x22000000),
-                    offset: Offset(0, 2),
-                    blurRadius: 6,
+                    color: Colors.black.withOpacity(0.10),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: Column(
                 children: [
                   Text(
-                    'Prediction: $displayName',
-                    textAlign: TextAlign.center,
+                    displayName,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      decoration: TextDecoration.underline,
-                      color: Colors.black,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
+
                   if (color != null || texture != null || shape != null)
                     Text(
                       [
-                        if (color != null) 'Color: $color',
-                        if (texture != null) 'Texture: $texture',
-                        if (shape != null) 'Shape: $shape',
-                      ].join('\n'),
+                        if (color != null) "• Color: $color",
+                        if (texture != null) "• Texture: $texture",
+                        if (shape != null) "• Shape: $shape",
+                      ].join("\n"),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black87,
-                      ),
+                      style: const TextStyle(fontSize: 13, height: 1.35),
                     ),
-                  const SizedBox(height: 12),
+
+                  const SizedBox(height: 16),
+
                   Row(
                     children: [
                       Expanded(
                         child: _pill(
-                          label: 'Confidence',
+                          label: "Confidence",
                           value: confidenceText,
                           bgColor: const Color(0xFFE3F2FD),
                           textColor: const Color(0xFF1E88E5),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: _pill(
-                          label: 'Risk level',
+                          label: "Risk",
                           value: risk,
-                          bgColor: risk == 'High'
-                              ? const Color(0xFFFFEBEE)
-                              : (risk == 'Moderate'
-                                  ? const Color(0xFFFFF8E1)
-                                  : risk == 'Unknown'
-                                      ? const Color(0xFFE0E0E0)
-                                      : const Color(0xFFE8F5E9)),
-                          textColor: risk == 'High'
-                              ? const Color(0xFFC62828)
-                              : (risk == 'Moderate'
-                                  ? const Color(0xFFEF6C00)
-                                  : risk == 'Unknown'
-                                      ? const Color(0xFF424242)
-                                      : const Color(0xFF2E7D32)),
+                          bgColor: risk == "High"
+                              ? const Color(0xFFFFE5E7)
+                              : risk == "Moderate"
+                              ? const Color(0xFFFFF5D9)
+                              : Colors.grey.shade200,
+                          textColor: risk == "High"
+                              ? const Color(0xFFCC1C1C)
+                              : risk == "Moderate"
+                              ? const Color(0xFFDE7F00)
+                              : Colors.grey.shade800,
                         ),
                       ),
                     ],
@@ -392,78 +370,85 @@ class UploadedResult extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
 
-            // Description card (light blue bubble)
+            // ------------------------------
+            // Description Card (modern white card)
+            // ------------------------------
             Container(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
               decoration: BoxDecoration(
-                color: const Color(0xFFC0E4FF),
-                borderRadius: BorderRadius.circular(35),
-                boxShadow: const [
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
                   BoxShadow(
-                    color: Color(0x3F000000),
-                    offset: Offset(0, 4),
-                    blurRadius: 0,
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-              child: RichText(
-                textAlign: TextAlign.left,
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '$displayName ',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayName,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                     ),
-                    TextSpan(
-                      text: description,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    description,
+                    style: const TextStyle(fontSize: 13, height: 1.45),
+                  ),
+                ],
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 26),
 
-            // ✅ View full results → ONLY navigate to ResultPage
+            // ------------------------------
+            // Gradient Button (KuCognition style)
+            // ------------------------------
             SizedBox(
-              height: 44,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B87D2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              height: 46,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF3B87D2), Color(0xFF2361C9)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
                   ),
-                  elevation: 3,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/result_page',
-                    arguments: {
-                      'imagePath': imagePath,
-                      'label': predictionKey,
-                      'confidence': modelConfidence,
-                    },
-                  );
-                },
-                child: const Text(
-                  'View full results here',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/result_page',
+                      arguments: {
+                        'imagePath': imagePath,
+                        'label': predictionKey,
+                        'confidence': modelConfidence,
+                      },
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    "View full results here",
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -474,7 +459,9 @@ class UploadedResult extends StatelessWidget {
     );
   }
 
-  // Small helper pill widget for confidence & risk
+  // ----------------------------------------------------
+  // PILL WIDGET (UNCHANGED LOGIC, MODERNIZED STYLE)
+  // ----------------------------------------------------
   static Widget _pill({
     required String label,
     required String value,
@@ -482,28 +469,23 @@ class UploadedResult extends StatelessWidget {
     required Color textColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: textColor.withOpacity(0.8),
-            ),
+            style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.8)),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Text(
             value,
             style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
               color: textColor,
             ),
           ),

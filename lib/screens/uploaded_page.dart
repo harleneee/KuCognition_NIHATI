@@ -1,3 +1,4 @@
+// uploaded_page.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,13 +18,45 @@ class UploadedPage extends StatefulWidget {
   State<UploadedPage> createState() => _UploadedPageState();
 }
 
-class _UploadedPageState extends State<UploadedPage> {
+class _UploadedPageState extends State<UploadedPage>
+    with SingleTickerProviderStateMixin {
+  // -----------------------
+  // Colors & theme tokens
+  // -----------------------
+  static const Color _bg = Color(0xFFEAF5FD);
+  static const Color _mutedText = Color(0xFF64748B);
+  static const Color _darkText = Color(0xFF0E0E0E);
+  static const Color _primarySolid = Color(0xFF3B87D2);
+  static const Color _primaryDark = Color(0xFF1C4FA3);
+  static const Color _card = Color(0xFFF8F7FF);
+  static const Color _borderBlue = Color(0xFF384EB7);
+  static const Color _accentPurple = Color(0xFF5A4EDB);
+
+  final Gradient _primaryGradient = const LinearGradient(
+    colors: [_primarySolid, _primaryDark],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+  );
+
+  // -----------------------
+  // State + controllers
+  // -----------------------
   final ImagePicker _picker = ImagePicker();
   XFile? _selectedImage;
   bool _isAnalyzing = false;
   bool _isPopupShown = false;
 
-  // ⭐ FINAL RISK ALGORITHM (severity + confidence)
+  // Small animation to slightly scale in the preview card
+  late final AnimationController _animController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 260),
+    lowerBound: 0.0,
+    upperBound: 1.0,
+  );
+
+  // -----------------------
+  // Risk mapping (unchanged logic)
+  // -----------------------
   String _mapRisk(String label, double? conf) {
     final double c = conf ?? 0.0;
 
@@ -51,6 +84,9 @@ class _UploadedPageState extends State<UploadedPage> {
     return 'Unknown';
   }
 
+  // -----------------------
+  // Image pick + upload + analyze (preserved)
+  // -----------------------
   Future<void> _pickImage() async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -62,6 +98,7 @@ class _UploadedPageState extends State<UploadedPage> {
         setState(() {
           _selectedImage = image;
         });
+        _animController.forward(from: 0.0);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -85,7 +122,9 @@ class _UploadedPageState extends State<UploadedPage> {
       final String storageFileName =
           '${user.uid}/${DateTime.now().millisecondsSinceEpoch}_$fileName';
 
-      await supabase.storage.from('history').uploadBinary(
+      await supabase.storage
+          .from('history')
+          .uploadBinary(
             storageFileName,
             bytes,
             fileOptions: const FileOptions(
@@ -94,8 +133,9 @@ class _UploadedPageState extends State<UploadedPage> {
             ),
           );
 
-      final publicUrl =
-          supabase.storage.from('history').getPublicUrl(storageFileName);
+      final publicUrl = supabase.storage
+          .from('history')
+          .getPublicUrl(storageFileName);
 
       debugPrint('✅ Supabase upload success. URL: $publicUrl');
       return publicUrl;
@@ -153,27 +193,28 @@ class _UploadedPageState extends State<UploadedPage> {
             .doc(user.uid)
             .collection('history')
             .add({
-          'predictionLabel': predictionLabel,
-          'conditionKey': predictionLabel,
-          'confidence': confidence,
-          'risk': risk,
-          'imageUrl': imageUrl,
-          'imagePath': null,
-          'source': 'upload',
-          'timestamp': Timestamp.now(),
-        });
+              'predictionLabel': predictionLabel,
+              'conditionKey': predictionLabel,
+              'confidence': confidence,
+              'risk': risk,
+              'imageUrl': imageUrl,
+              'imagePath': null,
+              'source': 'upload',
+              'timestamp': Timestamp.now(),
+            });
 
         // Increment total scans
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .set({'totalScans': FieldValue.increment(1)}, SetOptions(merge: true));
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'totalScans': FieldValue.increment(1),
+        }, SetOptions(merge: true));
       }
     } catch (e) {
       debugPrint('❌ Error analyzing image: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error analyzing image: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error analyzing image: $e')));
+      }
     } finally {
       if (!mounted) return;
 
@@ -195,10 +236,9 @@ class _UploadedPageState extends State<UploadedPage> {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // 🔻 BELOW THIS POINT — YOUR UI WAS NOT CHANGED AT ALL 🔻
-  // ---------------------------------------------------------------------------
-
+  // -----------------------
+  // Cancel / guidelines (unchanged but styled)
+  // -----------------------
   Future<void> handleCancel() async {
     if (_selectedImage != null) {
       final bool? shouldDiscard = await showDialog<bool>(
@@ -257,15 +297,16 @@ class _UploadedPageState extends State<UploadedPage> {
 
         return Center(
           child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.12),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              ),
-            ),
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, 0.12),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
             child: FadeTransition(
               opacity: CurvedAnimation(
                 parent: animation,
@@ -273,7 +314,10 @@ class _UploadedPageState extends State<UploadedPage> {
               ),
               child: Dialog(
                 backgroundColor: Colors.transparent,
-                insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                insetPadding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 24,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                 ),
@@ -352,8 +396,10 @@ class _UploadedPageState extends State<UploadedPage> {
                       const SizedBox(height: 16),
 
                       Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFEDF2FF),
                           borderRadius: BorderRadius.circular(999),
@@ -429,7 +475,8 @@ class _UploadedPageState extends State<UploadedPage> {
                               icon: Icons.crop_free,
                               spans: [
                                 TextSpan(
-                                  text: 'Keep the nail flat to the camera, filling ',
+                                  text:
+                                      'Keep the nail flat to the camera, filling ',
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: Color(0xFF4E5A65),
@@ -437,7 +484,7 @@ class _UploadedPageState extends State<UploadedPage> {
                                   ),
                                 ),
                                 TextSpan(
-                                  text: '70–80%',
+                                  text: '70–80% ',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
@@ -446,7 +493,7 @@ class _UploadedPageState extends State<UploadedPage> {
                                   ),
                                 ),
                                 TextSpan(
-                                  text: ' of the frame.',
+                                  text: 'of the frame.',
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: Color(0xFF4E5A65),
@@ -603,180 +650,406 @@ class _UploadedPageState extends State<UploadedPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    super.initState();
+    // show guidelines after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) => _showPhotoGuidelines());
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  // -----------------------
+  // UI
+  // -----------------------
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final safeTop = media.padding.top;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFEAF5FD),
+      backgroundColor: _bg,
+      // AppBar with lighter look
       appBar: AppBar(
-        backgroundColor: const Color(0xFFEAF5FD),
+        backgroundColor: _bg,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: () => handleCancel(),
         ),
         centerTitle: true,
         title: const Text(
           'Upload Image',
           style: TextStyle(
-            color: Color(0xFF0E0E0E),
+            color: _darkText,
             fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Center(
+      body: SafeArea(
+        bottom: true,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+          child: Column(
+            children: [
+              // Top info card
+              Material(
+                color: Colors.white,
+                elevation: 2,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    // subtle gradient top-left
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: _primaryGradient,
+                          boxShadow: [
+                            BoxShadow(
+                              color: _primaryDark.withOpacity(0.15),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.photo_camera,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Upload a clear nail photo',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: _darkText,
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            Text(
+                              'We’ll analyze the image for early signs of nail conditions.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: _mutedText,
+                                height: 1.35,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        splashRadius: 20,
+                        onPressed: () {
+                          _showPhotoGuidelines(); // Open popup guidelines
+                        },
+                        icon: const Icon(
+                          Icons.info_outline,
+                          color: Color(0xFF64748B), // muted text color
+                          size: 20,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              // Uploader / preview (expanded)
+              Expanded(
                 child: GestureDetector(
                   onTap: _pickImage,
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
                     width: double.infinity,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8F7FF),
-                      borderRadius: BorderRadius.circular(8),
+                      color: _card,
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: const Color(0x4C384EB7),
-                        width: 1,
+                        color: _selectedImage == null
+                            ? _borderBlue.withOpacity(0.18)
+                            : _borderBlue,
+                        width: _selectedImage == null ? 1.0 : 1.6,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 18,
                     ),
                     child: _selectedImage == null
-                        ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(
-                                Icons.cloud_upload_outlined,
-                                size: 56,
-                                color: Color(0xFF5A4EDB),
-                              ),
-                              SizedBox(height: 24),
-                              Text(
-                                'Click to upload',
+                        ? _buildEmptyState()
+                        : _buildPreviewState(),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Analyze button (gradient)
+              SizedBox(
+                height: 52,
+                width: double.infinity,
+                child: GestureDetector(
+                  onTap: (_selectedImage == null || _isAnalyzing)
+                      ? null
+                      : _analyzeImage,
+                  child: AbsorbPointer(
+                    absorbing: (_selectedImage == null || _isAnalyzing),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: (_selectedImage == null || _isAnalyzing)
+                            ? LinearGradient(
+                                colors: [
+                                  _primarySolid.withOpacity(0.45),
+                                  _primaryDark.withOpacity(0.45),
+                                ],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              )
+                            : _primaryGradient,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: (_selectedImage == null || _isAnalyzing)
+                            ? []
+                            : [
+                                BoxShadow(
+                                  color: _primaryDark.withOpacity(0.18),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: (_selectedImage == null || _isAnalyzing)
+                            ? null
+                            : _analyzeImage,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isAnalyzing
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'Analyzing...',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : const Text(
+                                'Analyze photo',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF333333),
+                                  color: Colors.white,
                                 ),
                               ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Supported formats: JPEG, JPG, PNG, WEBP',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF676767),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: const Color(0xFF384EB7),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: SizedBox(
-                                    width: double.infinity,
-                                    height: 260,
-                                    child: Image.file(
-                                      File(_selectedImage!.path),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              TextButton.icon(
-                                onPressed: _pickImage,
-                                icon: const Icon(
-                                  Icons.photo_camera_back_outlined,
-                                  size: 18,
-                                  color: Color(0xFF3B87D2),
-                                ),
-                                label: const Text(
-                                  'Change photo',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color(0xFF3B87D2),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B87D2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  elevation: 3,
-                  shadowColor: Colors.black26,
-                ),
-                onPressed: (_selectedImage == null || _isAnalyzing)
-                    ? null
-                    : _analyzeImage,
-                child: _isAnalyzing
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Analyzing...',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      )
-                    : const Text(
-                        'Analyze photo',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
                       ),
+                    ),
+                  ),
+                ),
               ),
-            ),
 
-            const SizedBox(height: 12),
-          ],
+              const SizedBox(height: 10),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  // -----------------------
+  // Empty state widget (improved visuals)
+  // -----------------------
+  Widget _buildEmptyState() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // circle with cloud icon
+        Container(
+          width: 94,
+          height: 94,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: _borderBlue.withOpacity(0.08),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Container(
+              width: 62,
+              height: 62,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: _primaryGradient,
+              ),
+              child: const Icon(
+                Icons.cloud_upload_outlined,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 18),
+
+        const Text(
+          'Tap to upload',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: _darkText,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        const Text(
+          'Supported formats: JPEG, JPG, PNG, WEBP',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13, color: _mutedText),
+        ),
+
+        const SizedBox(height: 18),
+
+        // subtle dashed hint
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.4),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: const Text(
+            'Best results: 70–80% nail coverage, natural light',
+            style: TextStyle(fontSize: 12, color: _mutedText),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // -----------------------
+  // Preview state widget
+  // -----------------------
+  Widget _buildPreviewState() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        ScaleTransition(
+          scale: Tween<double>(begin: 0.98, end: 1.0).animate(
+            CurvedAnimation(parent: _animController, curve: Curves.easeOutBack),
+          ),
+          child: Material(
+            elevation: 6,
+            shadowColor: Colors.black26,
+            borderRadius: BorderRadius.circular(12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: double.infinity,
+                height: 260,
+                child: Image.file(
+                  File(_selectedImage!.path),
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Center(child: Text('Unable to show image'));
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton.icon(
+              onPressed: _pickImage,
+              icon: const Icon(
+                Icons.photo_camera_back_outlined,
+                size: 18,
+                color: _primarySolid,
+              ),
+              label: const Text(
+                'Change photo',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: _primarySolid,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _selectedImage = null;
+                });
+              },
+              child: const Text(
+                'Remove',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: _mutedText,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -785,10 +1058,7 @@ class _GuidelineRow extends StatelessWidget {
   final IconData icon;
   final List<TextSpan> spans;
 
-  const _GuidelineRow({
-    required this.icon,
-    required this.spans,
-  });
+  const _GuidelineRow({required this.icon, required this.spans});
 
   @override
   Widget build(BuildContext context) {
@@ -797,17 +1067,11 @@ class _GuidelineRow extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 2),
-          child: Icon(
-            icon,
-            size: 18,
-            color: const Color(0xFF3B87D2),
-          ),
+          child: Icon(icon, size: 18, color: const Color(0xFF3B87D2)),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: RichText(
-            text: TextSpan(children: spans),
-          ),
+          child: RichText(text: TextSpan(children: spans)),
         ),
       ],
     );

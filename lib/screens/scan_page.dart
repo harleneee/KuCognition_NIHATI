@@ -25,6 +25,9 @@ class _ScanPageState extends State<ScanPage> {
   XFile? _capturedImage;
   bool _loading = false;
 
+  /// Tracks popup visibility
+  bool _isPopupShown = false;
+
   // =====================================================================
   // 📸 Capture from Camera
   // =====================================================================
@@ -61,7 +64,9 @@ class _ScanPageState extends State<ScanPage> {
       final String storageFileName =
           '${user.uid}/${DateTime.now().millisecondsSinceEpoch}_$fileName';
 
-      await supabase.storage.from('history').uploadBinary(
+      await supabase.storage
+          .from('history')
+          .uploadBinary(
             storageFileName,
             bytes,
             fileOptions: const FileOptions(
@@ -70,8 +75,9 @@ class _ScanPageState extends State<ScanPage> {
             ),
           );
 
-      final publicUrl =
-          supabase.storage.from('history').getPublicUrl(storageFileName);
+      final publicUrl = supabase.storage
+          .from('history')
+          .getPublicUrl(storageFileName);
 
       debugPrint('✅ Supabase upload success (scan). URL: $publicUrl');
       return publicUrl;
@@ -93,8 +99,7 @@ class _ScanPageState extends State<ScanPage> {
       final result = await ApiService.predictNailDisease(file);
 
       final String label = result['label'] as String;
-      final double confidence =
-          (result['confidence'] as num).toDouble();
+      final double confidence = (result['confidence'] as num).toDouble();
 
       final String? imageUrl = await _uploadToSupabase(file.path);
 
@@ -104,10 +109,7 @@ class _ScanPageState extends State<ScanPage> {
         imageUrl: imageUrl,
       );
 
-      _showResultPopup(
-        label: label,
-        confidence: confidence,
-      );
+      _showResultPopup(label: label, confidence: confidence);
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -118,7 +120,7 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   // =====================================================================
-  // ⭐ NEW RISK ALGORITHM (severity + confidence)
+  // ⭐ NEW RISK ALGORITHM
   // =====================================================================
   String _riskForLabel(String label, double conf) {
     // 🔴 HIGH-SEVERITY DISEASES
@@ -240,8 +242,10 @@ class _ScanPageState extends State<ScanPage> {
             child: Column(
               children: [
                 const SizedBox(height: 6),
-                const Text("Prediction:",
-                    style: TextStyle(fontWeight: FontWeight.w600)),
+                const Text(
+                  "Prediction:",
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 3),
 
                 Text(
@@ -320,11 +324,317 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   // =====================================================================
+  // 📌 PHOTO GUIDELINES POPUP (Auto-Show)
+  // =====================================================================
+  void _showPhotoGuidelines() {
+    if (_isPopupShown) return;
+
+    setState(() => _isPopupShown = true);
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Photo guidelines',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 260),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        final size = MediaQuery.of(context).size;
+
+        return Center(
+          child: SlideTransition(
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, 0.12),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
+            child: FadeTransition(
+              opacity: CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              ),
+              child: Dialog(
+                backgroundColor: Colors.transparent,
+                insetPadding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 24,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Container(
+                  width: size.width * 0.9,
+                  constraints: const BoxConstraints(maxHeight: 600),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 18,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // HEADER ---------------------------
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0xFFEAF5FD),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt_outlined,
+                              size: 20,
+                              color: Color(0xFF3B87D2),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Best Image Quality Guidelines',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF001372),
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Follow these quick tips so KuCognition can analyze your nail as accurately as possible.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF64748B),
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.close,
+                              size: 20,
+                              color: Color(0xFF94A3B8),
+                            ),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // SCROLL AREA -----------------------
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              SizedBox(height: 6),
+                              _GuidelineRow(
+                                icon: Icons.wb_sunny_outlined,
+                                spans: [
+                                  TextSpan(
+                                    text: 'Use natural light near a window; ',
+                                    style: TextStyle(color: Color(0xFF4E5A65)),
+                                  ),
+                                  TextSpan(
+                                    text: 'avoid colored lights.',
+                                    style: TextStyle(color: Color(0xFFDC2626)),
+                                  ),
+                                ],
+                              ),
+
+                              SizedBox(height: 6),
+                              _GuidelineRow(
+                                icon: Icons.flash_off_outlined,
+                                spans: [
+                                  TextSpan(
+                                    text: 'Turn off flash',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF111827),
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: '; no harsh reflections or glare.',
+                                    style: TextStyle(color: Color(0xFF4E5A65)),
+                                  ),
+                                ],
+                              ),
+
+                              SizedBox(height: 6),
+                              _GuidelineRow(
+                                icon: Icons.crop_free,
+                                spans: [
+                                  TextSpan(
+                                    text:
+                                        'Keep the nail flat to the camera, filling ',
+                                    style: TextStyle(color: Color(0xFF4E5A65)),
+                                  ),
+                                  TextSpan(
+                                    text: '70–80%',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF111827),
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: ' of the frame.',
+                                    style: TextStyle(color: Color(0xFF4E5A65)),
+                                  ),
+                                ],
+                              ),
+
+                              SizedBox(height: 6),
+                              _GuidelineRow(
+                                icon: Icons.brush_outlined,
+                                spans: [
+                                  TextSpan(
+                                    text: 'Remove polish; ',
+                                    style: TextStyle(color: Color(0xFF4E5A65)),
+                                  ),
+                                  TextSpan(
+                                    text: 'wipe the nail dry/clean.',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF111827),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              SizedBox(height: 6),
+                              _GuidelineRow(
+                                icon: Icons.center_focus_strong_outlined,
+                                spans: [
+                                  TextSpan(
+                                    text: 'Hold still ',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF111827),
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: 'for 1–2 seconds; lock autofocus.',
+                                    style: TextStyle(color: Color(0xFF4E5A65)),
+                                  ),
+                                ],
+                              ),
+
+                              SizedBox(height: 6),
+                              _GuidelineRow(
+                                icon: Icons.layers_outlined,
+                                spans: [
+                                  TextSpan(
+                                    text: 'Use a ',
+                                    style: TextStyle(color: Color(0xFF4E5A65)),
+                                  ),
+                                  TextSpan(
+                                    text: 'plain, non-reflective background',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF111827),
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: ' (paper/towel).',
+                                    style: TextStyle(color: Color(0xFF4E5A65)),
+                                  ),
+                                ],
+                              ),
+
+                              SizedBox(height: 16),
+                              Text(
+                                'Example photo',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF475569),
+                                ),
+                              ),
+
+                              SizedBox(height: 6),
+
+                              ClipRRect(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(16),
+                                ),
+                                child: SizedBox(
+                                  height: 120,
+                                  width: double.infinity,
+                                  child: Image(
+                                    image: AssetImage(
+                                      'assets/images/sampleimage.png',
+                                    ),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF3B87D2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text(
+                            'Got it!',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // =====================================================================
   // ⭐ UI
   // =====================================================================
   @override
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
+
+    // AUTO SHOW GUIDELINES POPUP
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_isPopupShown) _showPhotoGuidelines();
+    });
 
     return Scaffold(
       backgroundColor: const Color(0xFFEAF5FD),
@@ -375,7 +685,10 @@ class _ScanPageState extends State<ScanPage> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFF4F6FA),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFF3B87D2), width: 3),
+                    border: Border.all(
+                      color: const Color(0xFF3B87D2),
+                      width: 3,
+                    ),
                   ),
                   child: _capturedImage == null
                       ? const SizedBox()
@@ -400,7 +713,9 @@ class _ScanPageState extends State<ScanPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       border: Border.all(
-                          color: const Color(0xFF3B87D2), width: 1.2),
+                        color: const Color(0xFF3B87D2),
+                        width: 1.2,
+                      ),
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: const Row(
@@ -414,8 +729,7 @@ class _ScanPageState extends State<ScanPage> {
                           ),
                         ),
                         SizedBox(width: 6),
-                        Icon(Icons.upload,
-                            color: Color(0xFF001372), size: 18),
+                        Icon(Icons.upload, color: Color(0xFF001372), size: 18),
                       ],
                     ),
                   ),
@@ -431,8 +745,10 @@ class _ScanPageState extends State<ScanPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border:
-                          Border.all(width: 3, color: const Color(0xFF3B87D2)),
+                      border: Border.all(
+                        width: 3,
+                        color: const Color(0xFF3B87D2),
+                      ),
                       boxShadow: const [
                         BoxShadow(
                           color: Colors.black12,
@@ -484,8 +800,7 @@ class _ScanPageState extends State<ScanPage> {
                       const Expanded(
                         child: Text(
                           "Explore nail health indicators and their meanings.",
-                          style:
-                              TextStyle(fontSize: 13, color: Colors.white70),
+                          style: TextStyle(fontSize: 13, color: Colors.white70),
                         ),
                       ),
                       const Text(
@@ -504,6 +819,33 @@ class _ScanPageState extends State<ScanPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 📚 Guideline Row Widget
+// ---------------------------------------------------------------------------
+class _GuidelineRow extends StatelessWidget {
+  final IconData icon;
+  final List<TextSpan> spans;
+
+  const _GuidelineRow({required this.icon, required this.spans});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(icon, size: 18, color: Color(0xFF3B87D2)),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(text: TextSpan(children: spans)),
+        ),
+      ],
     );
   }
 }
