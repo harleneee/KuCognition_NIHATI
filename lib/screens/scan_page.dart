@@ -25,9 +25,6 @@ class _ScanPageState extends State<ScanPage> {
   XFile? _capturedImage;
   bool _loading = false;
 
-  // 🔹 for guidelines popup (same pattern as UploadedPage)
-  bool _isPopupShown = false;
-
   // =====================================================================
   // 📸 Capture from Camera
   // =====================================================================
@@ -50,8 +47,7 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   // =====================================================================
-  // 🔹 Upload to Supabase `history` bucket and return **public URL**.
-  //     (Same pattern as UploadedPage)
+  // 🔹 Upload to Supabase `history` bucket and return public URL
   // =====================================================================
   Future<String?> _uploadToSupabase(String filePath) async {
     try {
@@ -65,9 +61,7 @@ class _ScanPageState extends State<ScanPage> {
       final String storageFileName =
           '${user.uid}/${DateTime.now().millisecondsSinceEpoch}_$fileName';
 
-      await supabase.storage
-          .from('history')
-          .uploadBinary(
+      await supabase.storage.from('history').uploadBinary(
             storageFileName,
             bytes,
             fileOptions: const FileOptions(
@@ -76,9 +70,8 @@ class _ScanPageState extends State<ScanPage> {
             ),
           );
 
-      final publicUrl = supabase.storage
-          .from('history')
-          .getPublicUrl(storageFileName);
+      final publicUrl =
+          supabase.storage.from('history').getPublicUrl(storageFileName);
 
       debugPrint('✅ Supabase upload success (scan). URL: $publicUrl');
       return publicUrl;
@@ -89,7 +82,7 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   // =====================================================================
-  // 🔥 Call Backend API + UPLOAD IMAGE (Supabase) + SAVE TO HISTORY
+  // 🔥 Call Backend API + Upload Image + Save to Firestore
   // =====================================================================
   Future<void> _runPrediction(File file) async {
     if (_loading) return;
@@ -99,23 +92,22 @@ class _ScanPageState extends State<ScanPage> {
     try {
       final result = await ApiService.predictNailDisease(file);
 
-      // ⭐ make sure types are clean
       final String label = result['label'] as String;
-      final double confidence = (result['confidence'] as num)
-          .toDouble(); // handles int/double
+      final double confidence =
+          (result['confidence'] as num).toDouble();
 
-      // 1) Upload image to Supabase (if user logged in)
       final String? imageUrl = await _uploadToSupabase(file.path);
 
-      // 2) Save this scan to Firestore history (same schema as UploadedPage)
       await _saveScanToHistory(
         label: label,
         confidence: confidence,
         imageUrl: imageUrl,
       );
 
-      // 3) Show popup + go to ResultPage
-      _showResultPopup(label: label, confidence: confidence);
+      _showResultPopup(
+        label: label,
+        confidence: confidence,
+      );
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -126,30 +118,35 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   // =====================================================================
-  // ⭐ helper to map label -> risk (8 classes)
+  // ⭐ NEW RISK ALGORITHM (severity + confidence)
   // =====================================================================
-  String _riskForLabel(String label) {
-    switch (label) {
-      case 'Acral Lentiginous Melanoma':
-      case 'Bluish Nail':
-        return 'High';
-      case 'Healthy Nail':
-        return 'Low';
-      case 'Clubbing':
-      case 'Onychogryphosis':
-      case 'Pitting':
-      case 'Beau’s Lines':
-      case 'Koilonychia':
-        return 'Moderate';
-      case 'Unknown / Not in trained classes':
-        return 'Unknown';
-      default:
-        return 'Unknown';
+  String _riskForLabel(String label, double conf) {
+    // 🔴 HIGH-SEVERITY DISEASES
+    if (label == 'Acral Lentiginous Melanoma' || label == 'Bluish Nail') {
+      if (conf >= 0.85) return 'High';
+      if (conf >= 0.60) return 'Moderate';
+      return 'Low–Moderate';
     }
+
+    // 🟠 MODERATE-SEVERITY DISEASES
+    if (label == 'Clubbing' ||
+        label == 'Onychogryphosis' ||
+        label == 'Pitting' ||
+        label == 'Beau’s Lines' ||
+        label == 'Koilonychia') {
+      if (conf >= 0.85) return 'Moderate–High';
+      if (conf >= 0.60) return 'Moderate';
+      return 'Low';
+    }
+
+    // 🟢 LOW-SEVERITY (HEALTHY)
+    if (label == 'Healthy Nail') return 'Low';
+
+    return 'Unknown';
   }
 
   // =====================================================================
-  // ⭐ Write to Firestore history (mirror UploadedPage schema)
+  // ⭐ Save history (scan)
   // =====================================================================
   Future<void> _saveScanToHistory({
     required String label,
@@ -157,9 +154,9 @@ class _ScanPageState extends State<ScanPage> {
     required String? imageUrl,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return; // no logged in user, skip
+    if (user == null) return;
 
-    final String risk = _riskForLabel(label);
+    final String risk = _riskForLabel(label, confidence);
 
     final historyRef = FirebaseFirestore.instance
         .collection('users')
@@ -167,26 +164,21 @@ class _ScanPageState extends State<ScanPage> {
         .collection('history');
 
     await historyRef.add({
-      'predictionLabel': label, // human-readable label
-      'conditionKey': label, // same label as key
-      'confidence': confidence, // 0–1 double
-      'risk': risk, // High/Moderate/Low/Unknown
-      'imageUrl': imageUrl, // Supabase public URL or null
-      'imagePath': null, // keep same as UploadedPage
-      'source': 'scan', // "scan" vs "upload"
-      'timestamp': Timestamp.now(), // match UploadedPage style
+      'predictionLabel': label,
+      'conditionKey': label,
+      'confidence': confidence,
+      'risk': risk,
+      'imageUrl': imageUrl,
+      'imagePath': null,
+      'source': 'scan',
+      'timestamp': Timestamp.now(),
     });
 
-    // ✅ INCREMENT totalScans after successful history write
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-      'totalScans': FieldValue.increment(1),
-    }, SetOptions(merge: true));
-
-    debugPrint('✅ History saved for camera scan & totalScans incremented.');
+    debugPrint('✅ History saved for camera scan.');
   }
 
   // =====================================================================
-  // 🛑 Popup window after prediction  (UNCHANGED)
+  // 🛑 Popup Window
   // =====================================================================
   void _showResultPopup({required String label, required double confidence}) {
     final normalizedLabel = label.toLowerCase().trim();
@@ -225,6 +217,7 @@ class _ScanPageState extends State<ScanPage> {
           titlePadding: const EdgeInsets.only(top: 15, bottom: 4),
           contentPadding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
           actionsPadding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+
           title: Column(
             children: [
               const Text(
@@ -242,15 +235,15 @@ class _ScanPageState extends State<ScanPage> {
               ),
             ],
           ),
+
           content: SingleChildScrollView(
             child: Column(
               children: [
                 const SizedBox(height: 6),
-                const Text(
-                  "Prediction:",
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
+                const Text("Prediction:",
+                    style: TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 3),
+
                 Text(
                   label,
                   style: const TextStyle(
@@ -259,13 +252,14 @@ class _ScanPageState extends State<ScanPage> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+
                 const SizedBox(height: 6),
                 Text(
                   "Confidence: ${(confidence * 100).toStringAsFixed(1)}%",
                   style: const TextStyle(fontSize: 12, color: Colors.black54),
                 ),
                 const SizedBox(height: 12),
-                // short explanation
+
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
@@ -285,6 +279,7 @@ class _ScanPageState extends State<ScanPage> {
               ],
             ),
           ),
+
           actions: [
             SizedBox(
               height: 44,
@@ -325,413 +320,17 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   // =====================================================================
-  // 📌 PHOTO GUIDELINES POPUP (same style as UploadedPage)
-  // =====================================================================
-  void _showPhotoGuidelines() {
-    if (_isPopupShown) return; // Avoid showing again
-
-    setState(() {
-      _isPopupShown = true;
-    });
-
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Photo guidelines',
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 260),
-      pageBuilder: (context, animation, secondaryAnimation) {
-        final size = MediaQuery.of(context).size;
-
-        return Center(
-          child: SlideTransition(
-            position:
-                Tween<Offset>(
-                  begin: const Offset(0, 0.12),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                  ),
-                ),
-            child: FadeTransition(
-              opacity: CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              ),
-              child: Dialog(
-                backgroundColor: Colors.transparent,
-                insetPadding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 24,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Container(
-                  width: size.width * 0.9,
-                  constraints: const BoxConstraints(maxHeight: 600),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 18,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ---------------------- HEADER ----------------------
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(0xFFEAF5FD),
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt_outlined,
-                              size: 20,
-                              color: Color(0xFF3B87D2),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Best Image Quality Guidelines',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF001372),
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Follow these quick tips so KuCognition can analyze your nail as accurately as possible.',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w400,
-                                    color: Color(0xFF64748B),
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            icon: const Icon(
-                              Icons.close,
-                              size: 20,
-                              color: Color(0xFF94A3B8),
-                            ),
-                            onPressed: () => Navigator.of(context).pop(),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // ---------------------- SCROLLABLE CONTENT ----------------------
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Blue pill label
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFEDF2FF),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: const Text(
-                                  'Before you take a photo',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color(0xFF3B87D2),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              // GUIDELINES LIST (unchanged)
-                              const Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  SizedBox(height: 4),
-                                  _GuidelineRow(
-                                    icon: Icons.wb_sunny_outlined,
-                                    spans: [
-                                      TextSpan(
-                                        text:
-                                            'Use natural light near a window; ',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w400,
-                                          color: Color(0xFF4E5A65),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text: 'avoid colored lights.',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFFDC2626),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  SizedBox(height: 6),
-                                  _GuidelineRow(
-                                    icon: Icons.flash_off_outlined,
-                                    spans: [
-                                      TextSpan(
-                                        text: 'Turn off flash',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF111827),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text:
-                                            '; no harsh reflections or glare.',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w400,
-                                          color: Color(0xFF4E5A65),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  SizedBox(height: 6),
-                                  _GuidelineRow(
-                                    icon: Icons.crop_free,
-                                    spans: [
-                                      TextSpan(
-                                        text:
-                                            'Keep the nail flat to the camera, filling ',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w400,
-                                          color: Color(0xFF4E5A65),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text: '70–80%',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF111827),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text: ' of the frame.',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w400,
-                                          color: Color(0xFF4E5A65),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: 6),
-                                  _GuidelineRow(
-                                    icon: Icons.brush_outlined,
-                                    spans: [
-                                      TextSpan(
-                                        text: 'Remove polish; ',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w400,
-                                          color: Color(0xFF4E5A65),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text: 'wipe the nail dry/clean.',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF111827),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  SizedBox(height: 6),
-                                  _GuidelineRow(
-                                    icon: Icons.center_focus_strong_outlined,
-                                    spans: [
-                                      TextSpan(
-                                        text: 'Hold still ',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF111827),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text:
-                                            'for 1–2 seconds; lock autofocus.',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w400,
-                                          color: Color(0xFF4E5A65),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  SizedBox(height: 6),
-                                  _GuidelineRow(
-                                    icon: Icons.layers_outlined,
-                                    spans: [
-                                      TextSpan(
-                                        text: 'Use a ',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w400,
-                                          color: Color(0xFF4E5A65),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text:
-                                            'plain, non-reflective background',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF111827),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text: ' (paper/towel).',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w400,
-                                          color: Color(0xFF4E5A65),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 16),
-
-                              const Text(
-                                'Example photo',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF475569),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  height: 120,
-                                  child: Image.asset(
-                                    'assets/images/sampleimage.png',
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // ---------------------- BUTTON AT BOTTOM ----------------------
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF3B87D2),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            elevation: 2,
-                          ),
-                          child: const Text(
-                            'Got it!',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // =====================================================================
-  // ⭐ MAIN UI
+  // ⭐ UI
   // =====================================================================
   @override
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
-
-    // show guidelines once when page is loaded
-    WidgetsBinding.instance.addPostFrameCallback((_) => _showPhotoGuidelines());
 
     return Scaffold(
       backgroundColor: const Color(0xFFEAF5FD),
       body: SafeArea(
         child: Stack(
           children: [
-            // EXIT TO DASHBOARD
             Positioned(
               top: 6,
               right: 10,
@@ -745,7 +344,6 @@ class _ScanPageState extends State<ScanPage> {
               children: [
                 const SizedBox(height: 28),
 
-                // TITLE
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -761,6 +359,7 @@ class _ScanPageState extends State<ScanPage> {
                     Image.asset("assets/images/logo.png", height: 26),
                   ],
                 ),
+
                 const SizedBox(height: 4),
                 const Text(
                   "Align your nail within the frame",
@@ -776,10 +375,7 @@ class _ScanPageState extends State<ScanPage> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFF4F6FA),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: const Color(0xFF3B87D2),
-                      width: 3,
-                    ),
+                    border: Border.all(color: const Color(0xFF3B87D2), width: 3),
                   ),
                   child: _capturedImage == null
                       ? const SizedBox()
@@ -794,7 +390,6 @@ class _ScanPageState extends State<ScanPage> {
 
                 const SizedBox(height: 20),
 
-                // Upload button
                 GestureDetector(
                   onTap: () => Navigator.pushNamed(context, '/upload'),
                   child: Container(
@@ -805,9 +400,7 @@ class _ScanPageState extends State<ScanPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       border: Border.all(
-                        color: const Color(0xFF3B87D2),
-                        width: 1.2,
-                      ),
+                          color: const Color(0xFF3B87D2), width: 1.2),
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: const Row(
@@ -821,7 +414,8 @@ class _ScanPageState extends State<ScanPage> {
                           ),
                         ),
                         SizedBox(width: 6),
-                        Icon(Icons.upload, color: Color(0xFF001372), size: 18),
+                        Icon(Icons.upload,
+                            color: Color(0xFF001372), size: 18),
                       ],
                     ),
                   ),
@@ -829,7 +423,6 @@ class _ScanPageState extends State<ScanPage> {
 
                 const SizedBox(height: 32),
 
-                // CAMERA SCAN BUTTON
                 GestureDetector(
                   onTap: _loading ? null : _captureImage,
                   child: Container(
@@ -838,10 +431,8 @@ class _ScanPageState extends State<ScanPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        width: 3,
-                        color: const Color(0xFF3B87D2),
-                      ),
+                      border:
+                          Border.all(width: 3, color: const Color(0xFF3B87D2)),
                       boxShadow: const [
                         BoxShadow(
                           color: Colors.black12,
@@ -871,7 +462,6 @@ class _ScanPageState extends State<ScanPage> {
               ],
             ),
 
-            // LEARN MORE FOOTER
             Positioned(
               left: 0,
               right: 0,
@@ -894,7 +484,8 @@ class _ScanPageState extends State<ScanPage> {
                       const Expanded(
                         child: Text(
                           "Explore nail health indicators and their meanings.",
-                          style: TextStyle(fontSize: 13, color: Colors.white70),
+                          style:
+                              TextStyle(fontSize: 13, color: Colors.white70),
                         ),
                       ),
                       const Text(
@@ -913,31 +504,6 @@ class _ScanPageState extends State<ScanPage> {
           ],
         ),
       ),
-    );
-  }
-}
-
-// Helper for icon + rich text guideline row (same as UploadedPage)
-class _GuidelineRow extends StatelessWidget {
-  final IconData icon;
-  final List<TextSpan> spans;
-
-  const _GuidelineRow({required this.icon, required this.spans});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 2),
-          child: Icon(icon, size: 18, color: const Color(0xFF3B87D2)),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: RichText(text: TextSpan(children: spans)),
-        ),
-      ],
     );
   }
 }
