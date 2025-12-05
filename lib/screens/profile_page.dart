@@ -271,10 +271,6 @@ class _ProfilePageState extends State<ProfilePage> {
               if (isAboutSelected) ...[
                 _profileHeaderCard(data),
 
-                const SizedBox(height: 18),
-
-                _editProfileButton(),
-
                 const SizedBox(height: 24),
 
                 // NEW tiles
@@ -562,32 +558,6 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _editProfileButton() {
-    return ElevatedButton.icon(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF3B87D2),
-        minimumSize: const Size(double.infinity, 46),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        elevation: 5,
-        shadowColor: Colors.black26,
-      ),
-      onPressed: () {
-        // TODO: Add edit profile screen later
-      },
-      icon: const Icon(Icons.edit, color: Colors.white, size: 20),
-      label: const Text(
-        "Edit Profile",
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-          color: Colors.white,
-        ),
       ),
     );
   }

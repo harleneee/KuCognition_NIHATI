@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import '../data/chatbot_api.dart'; // adjust if your path is different
 import 'package:flutter_markdown/flutter_markdown.dart';
+// ✅ NEW: speech-to-text import
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 /// Local color palette for the chat screen.
 class AppColors {
@@ -27,6 +29,10 @@ class _ChatbotPageState extends State<ChatbotPage> {
   bool _isSending = false;
   bool _isBotTyping = false; // typing indicator toggle
 
+  // ✅ NEW: speech-to-text state
+  late stt.SpeechToText _speech;
+  bool _isListening = false;
+
   String _formatTime(DateTime dt) {
     final h = dt.hour > 12 ? dt.hour - 12 : dt.hour;
     final ampm = dt.hour >= 12 ? 'PM' : 'AM';
@@ -44,6 +50,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
   @override
   void initState() {
     super.initState();
+
+    // ✅ NEW: init speech instance
+    _speech = stt.SpeechToText();
 
     // If Dashboard passes an initial question, send it directly to KuBot.
     if (widget.initialPrompt.trim().isNotEmpty) {
@@ -134,10 +143,63 @@ class _ChatbotPageState extends State<ChatbotPage> {
     _sendToKuBot(prompt);
   }
 
+  // ✅ NEW: toggle mic listening and push transcript into the text field
+  Future<void> _toggleListening() async {
+    // If already listening → stop.
+    if (_isListening) {
+      await _speech.stop();
+      setState(() {
+        _isListening = false;
+      });
+      return;
+    }
+
+    // Initialize speech recognition (will handle permission the first time)
+    final available = await _speech.initialize(
+      onStatus: (status) => debugPrint('speech status: $status'),
+      onError: (error) => debugPrint('speech error: $error'),
+    );
+
+    if (!available) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Speech recognition not available on this device.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isListening = true;
+    });
+
+    _speech.listen(
+      onResult: (result) {
+        // Update text field with recognized words
+        setState(() {
+          _messageController.text = result.recognizedWords;
+          _messageController.selection = TextSelection.fromPosition(
+            TextPosition(offset: _messageController.text.length),
+          );
+        });
+      },
+      pauseFor: const Duration(seconds: 3),
+      listenFor: const Duration(seconds: 60),
+      // You can tweak locale if you want a specific language, or leave null.
+      // localeId: 'en_US',
+    );
+  }
+
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    // ✅ NEW: stop listening if still active
+    if (_isListening) {
+      _speech.stop();
+    }
     super.dispose();
   }
 
@@ -457,10 +519,15 @@ class _ChatbotPageState extends State<ChatbotPage> {
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.add_circle_outline,
-                    size: 20,
-                    color: Colors.black26,
+                  // ✅ UPDATED: mic icon is now tappable and shows listening state
+                  GestureDetector(
+                    onTap: _toggleListening,
+                    child: Icon(
+                      _isListening ? Icons.mic : Icons.mic_none,
+                      size: 20,
+                      color:
+                          _isListening ? AppColors.sendButton : Colors.black26,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -534,7 +601,7 @@ class _ChatMessage {
   final DateTime timestamp;
 
   _ChatMessage({required this.text, required this.isUser, DateTime? timestamp})
-    : timestamp = timestamp ?? DateTime.now();
+      : timestamp = timestamp ?? DateTime.now();
 }
 
 /// Simple static dot used in typing indicator.
