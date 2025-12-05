@@ -14,6 +14,9 @@ class DiseaseDetailsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final info = _diseaseData[disease] ?? _defaultInfo;
 
+    // ⭐ from your friend: map UI label → backend condition code
+    final String? conditionCode = _diseaseToConditionCode[disease];
+
     return Scaffold(
       backgroundColor: _bgBlue,
       body: SafeArea(
@@ -51,13 +54,12 @@ class DiseaseDetailsPage extends StatelessWidget {
                     children: [
                       _HeaderImage(info: info),
 
-                      // CONTENT
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 6, 20, 20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // OVERVIEW TITLE
+                            // Overview Title
                             Text(
                               info.overviewTitle,
                               style: const TextStyle(
@@ -67,7 +69,7 @@ class DiseaseDetailsPage extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
 
-                            // DESCRIPTION
+                            // Description
                             Text(
                               info.description,
                               style: const TextStyle(
@@ -78,7 +80,7 @@ class DiseaseDetailsPage extends StatelessWidget {
 
                             const SizedBox(height: 20),
 
-                            // KEY SIGNS
+                            // Key signs
                             if (info.keySigns.isNotEmpty)
                               const Text(
                                 "Key Visual Signs",
@@ -112,27 +114,24 @@ class DiseaseDetailsPage extends StatelessWidget {
 
                             const SizedBox(height: 30),
 
-                            // Ask KuBot Button
+                            // ⭐ Ask KuBot button (with mapping)
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
                                 onPressed: () {
-                                  final conditionCode =
-                                      _diseaseToConditionCode[disease];
-
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (_) => ChatbotPage(
                                         initialPrompt:
                                             "Hi KuBot, can you tell me more about ${info.displayTitle}? What causes it, and what should I do?",
-                                        initialCondition: conditionCode,
+                                        initialCondition: conditionCode, // ⭐ added
                                       ),
                                     ),
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xFF4C8CDA),
+                                  backgroundColor: const Color(0xFF4C8CDA),
                                   foregroundColor: Colors.white,
                                   elevation: 3,
                                   shape: RoundedRectangleBorder(
@@ -152,19 +151,19 @@ class DiseaseDetailsPage extends StatelessWidget {
 
                             const SizedBox(height: 10),
 
-                            // DONE BUTTON
-                            Center(
+                            // Done button
+                            SizedBox(
+                              width: double.infinity,
                               child: ElevatedButton(
                                 onPressed: () => Navigator.pop(context),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: _primaryBlue,
                                   foregroundColor: Colors.white,
                                   elevation: 3,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 32, vertical: 12),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(20),
                                   ),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
                                 child: const Text(
                                   "Done",
@@ -202,7 +201,9 @@ class DiseaseDetailsPage extends StatelessWidget {
   }
 }
 
-/// ******** HEADER IMAGE + TITLE BELOW ********
+//
+// ******** UI HEADER IMAGE ********
+//
 class _HeaderImage extends StatelessWidget {
   final _DiseaseInfo info;
 
@@ -212,7 +213,6 @@ class _HeaderImage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // BIG CLEAN NAIL IMAGE
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
           child: ClipRRect(
@@ -228,7 +228,6 @@ class _HeaderImage extends StatelessWidget {
           ),
         ),
 
-        // TITLE BELOW PHOTO
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
@@ -261,9 +260,8 @@ class _HeaderImage extends StatelessWidget {
 }
 
 //
-// ******** DATA MODEL + NEW EXPANDED DESCRIPTIONS ********
+// ******** DATA MODEL ********
 //
-
 class _DiseaseInfo {
   final String displayTitle;
   final String imagePath;
@@ -289,7 +287,9 @@ const _DiseaseInfo _defaultInfo = _DiseaseInfo(
   keySigns: [],
 );
 
-// NEW: map UI disease keys → backend condition codes
+//
+// ⭐ ADDED: Your friend’s mapping system
+//
 const Map<String, String> _diseaseToConditionCode = {
   "Blue Finger/Bluish nail (Cyanosis)": "bluish_nail",
   "Clubbing": "clubbing_nail",
@@ -305,6 +305,9 @@ const Map<String, String> _diseaseToConditionCode = {
   "Koilonychia": "koilonychia",
 };
 
+//
+// ******** COMPLETE DISEASE DATA ********
+//
 final Map<String, _DiseaseInfo> _diseaseData = {
   "Blue Finger/Bluish nail (Cyanosis)": _DiseaseInfo(
     displayTitle: "Blue Finger / Cyanosis",

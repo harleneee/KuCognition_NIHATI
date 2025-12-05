@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-
-// ✅ image picker + Supabase
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -20,7 +18,6 @@ class _ProfilePageState extends State<ProfilePage> {
   bool isLoading = true;
   bool isAboutSelected = true;
 
-  // ✅ state for avatar upload
   final ImagePicker _picker = ImagePicker();
   bool _uploadingAvatar = false;
 
@@ -29,6 +26,8 @@ class _ProfilePageState extends State<ProfilePage> {
     super.initState();
     _loadUserData();
   }
+
+  // ---------------------- LOAD USER DATA + HISTORY ----------------------
 
   Future<void> _loadUserData() async {
     try {
@@ -41,7 +40,7 @@ class _ProfilePageState extends State<ProfilePage> {
         return;
       }
 
-      // 1) Basic user document
+      // --- Basic User Document ---
       final snap = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -62,7 +61,7 @@ class _ProfilePageState extends State<ProfilePage> {
         profileImageUrl = data["profileImageUrl"] ?? "";
       }
 
-      // 2) Stats from history collection
+      // --- History Stats ---
       final historySnap = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -75,30 +74,30 @@ class _ProfilePageState extends State<ProfilePage> {
       String lastScan = "No scans yet";
 
       if (historySnap.docs.isNotEmpty) {
-        final lastDoc =
-            historySnap.docs.first.data() as Map<String, dynamic>? ?? {};
-        final String lastLabel =
-            (lastDoc['predictionLabel'] as String?) ?? 'Unknown condition';
+        final lastDoc = historySnap.docs.first.data() as Map<String, dynamic>? ?? {};
+        final String lastLabel = lastDoc['predictionLabel'] ?? 'Unknown condition';
+
         final tsRaw = lastDoc['timestamp'];
         String datePart = "";
 
         if (tsRaw is Timestamp) {
           final dt = tsRaw.toDate();
-          datePart = DateFormat('MMMM d, yyyy').format(dt).toUpperCase();
+          datePart = DateFormat('MMMM d, yyyy – h:mm a').format(dt); // nicer format
         }
 
         lastScan = datePart.isNotEmpty ? "$lastLabel • $datePart" : lastLabel;
 
+        // Count Frequent Labels
         final Map<String, int> counts = {};
         for (final d in historySnap.docs) {
           final m = d.data() as Map<String, dynamic>? ?? {};
-          final label =
-              (m['predictionLabel'] as String?) ?? 'Unknown condition';
+          final label = m['predictionLabel'] ?? 'Unknown condition';
           counts[label] = (counts[label] ?? 0) + 1;
         }
 
         String bestLabel = "None yet";
         int maxCount = 0;
+
         counts.forEach((label, count) {
           if (count > maxCount) {
             maxCount = count;
@@ -106,9 +105,7 @@ class _ProfilePageState extends State<ProfilePage> {
           }
         });
 
-        if (maxCount > 0) {
-          mostCommonResult = bestLabel;
-        }
+        mostCommonResult = bestLabel;
       }
 
       setState(() {
@@ -125,7 +122,7 @@ class _ProfilePageState extends State<ProfilePage> {
         isLoading = false;
       });
     } catch (e) {
-      debugPrint("Error loading profile data: $e");
+      debugPrint("Error loading user data: $e");
       setState(() {
         userData = {};
         isLoading = false;
@@ -133,7 +130,8 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // ✅ Pick image, upload to Supabase (history bucket), write URL to Firestore, update UI
+  // ---------------------- PROFILE IMAGE UPLOAD ----------------------
+
   Future<void> _pickAndUploadProfileImage() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -149,17 +147,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
       final bytes = await File(picked.path).readAsBytes();
 
-      // infer mime from extension
       String ext = picked.path.split('.').last.toLowerCase();
-      String contentType = switch (ext) {
-        'png' => 'image/png',
-        'webp' => 'image/webp',
-        'jpg' => 'image/jpeg',
-        'jpeg' => 'image/jpeg',
-        _ => 'image/jpeg',
-      };
+      String contentType = ext == "png"
+          ? "image/png"
+          : ext == "webp"
+              ? "image/webp"
+              : "image/jpeg";
 
-      // store under user's folder in the existing 'history' bucket
       final storagePath =
           '${user.uid}/profile_${DateTime.now().millisecondsSinceEpoch}.$ext';
 
@@ -177,20 +171,15 @@ class _ProfilePageState extends State<ProfilePage> {
       final publicUrl =
           supabase.storage.from('history').getPublicUrl(storagePath);
 
-      // Save URL to Firestore so it persists across sessions
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set(
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
         {
           'profileImageUrl': publicUrl,
-          'profileImagePath': storagePath, // for future delete/replace
+          'profileImagePath': storagePath,
           'profileUpdatedAt': FieldValue.serverTimestamp(),
         },
         SetOptions(merge: true),
       );
 
-      // Update local state immediately
       setState(() {
         userData = {
           ...?userData,
@@ -204,10 +193,10 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       }
     } catch (e) {
-      debugPrint('Avatar upload error: $e');
+      debugPrint("Avatar upload error: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not update profile photo: $e')),
+          SnackBar(content: Text('Could not upload photo: $e')),
         );
       }
     } finally {
@@ -215,11 +204,15 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  // ---------------------- LOGOUT ----------------------
+
   void _logout() async {
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, "/login");
   }
+
+  // ---------------------- UI BUILD ----------------------
 
   @override
   Widget build(BuildContext context) {
@@ -232,127 +225,76 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final data = userData ?? {};
 
-    // ✅ Intercept system back to always go straight to dashboard (and clear stack)
     return WillPopScope(
       onWillPop: () async {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/dashboard',
-          (route) => false,
-        );
+        Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (_) => false);
         return false;
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFEAF5FD),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFEAF5FD),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFF001372)),
-            // ✅ Back button: also go straight to dashboard and clear stack
-            onPressed: () => Navigator.pushNamedAndRemoveUntil(
-              context,
-              '/dashboard',
-              (route) => false,
-            ),
-          ),
-          centerTitle: true,
-          title: const Text(""),
-        ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _aboutHistoryTabs(),
+              _header(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+
+              _avatarAndProfileCard(data),
+
+              const SizedBox(height: 25),
 
               if (isAboutSelected) ...[
-                _profileHeaderCard(data),
-
+                _editProfileButton(),
                 const SizedBox(height: 24),
 
-                // NEW tiles
-                Row(
-                  children: [
-                    Expanded(
-                      child: _metricCard(
-                        label: "TOTAL SCANS",
-                        value: (data["totalScans"] ?? 0).toString(),
-                        isNumber: true, // big centered number
+                // METRICS
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _metricCard(
+                          label: "TOTAL SCANS",
+                          value: (data["totalScans"] ?? 0).toString(),
+                          isNumber: true,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: _metricCard(
-                        label: "MOST COMMON RESULT",
-                        value:
-                            (data["mostCommonResult"] ?? "None yet").toString(),
-                        isNumber: false, // wrap to two lines
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: _metricCard(
+                          label: "MOST COMMON RESULT",
+                          value: (data["mostCommonResult"] ?? "None yet")
+                              .toString(),
+                          isNumber: false,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
 
                 const SizedBox(height: 14),
 
-                _lastScanCard(
-                  title: "LAST SCAN",
-                  line1: (data["lastScan"] ?? "No scans yet")
-                      .toString()
-                      .split(" • ")
-                      .first,
-                  line2: (() {
-                    final parts =
-                        (data["lastScan"] ?? "").toString().split(" • ");
-                    return parts.length > 1 ? parts.last : null;
-                  })(),
+                // LAST SCAN CARD
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  child: _lastScanCard(
+                    title: "LAST SCAN",
+                    line1: (data["lastScan"] ?? "No scans yet")
+                        .toString()
+                        .split(" • ")
+                        .first,
+                    line2: (() {
+                      final parts =
+                          (data["lastScan"] ?? "").toString().split(" • ");
+                      return parts.length > 1 ? parts.last : null;
+                    })(),
+                  ),
                 ),
 
                 const SizedBox(height: 40),
-
                 _logoutButton(),
-              ] else ...[
-                const SizedBox(height: 40),
-                Container(
-                  width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 10,
-                        offset: Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Scan History",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF001372),
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      Text(
-                        "No scans yet.\nYour past nail scans will appear here.",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF6D777F),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                const SizedBox(height: 80),
+              ]
             ],
           ),
         ),
@@ -360,37 +302,224 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _aboutHistoryTabs() {
+  // ---------------------- HEADER UI (YOUR VERSION) ----------------------
+
+  Widget _header() {
     return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.15),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+      height: 200,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Color(0xFF9FCCFF),
+            Color(0xFF5E95E8),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(80),
+          bottomRight: Radius.circular(80),
+        ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GestureDetector(
-            onTap: () => setState(() => isAboutSelected = true),
-            child: _tabChip("ABOUT", isActive: isAboutSelected),
-          ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: () {
-              // ✅ Replace current route with History to avoid stacking
-              Navigator.pushReplacementNamed(context, '/history');
-            },
-            child: _tabChip("HISTORY", isActive: !isAboutSelected),
-          ),
-        ],
+      child: SafeArea(
+        child: Column(
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
+                  onPressed: () {
+                    Navigator.pushNamedAndRemoveUntil(
+                        context, '/dashboard', (_) => false);
+                  },
+                ),
+                const Spacer(),
+                const SizedBox(width: 48),
+              ],
+            ),
+
+            const SizedBox(height: 6),
+
+            // ABOUT | HISTORY TABS
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () => setState(() => isAboutSelected = true),
+                    child: _tabChip("ABOUT", isActive: isAboutSelected),
+                  ),
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: () =>
+                        Navigator.pushReplacementNamed(context, '/history'),
+                    child: _tabChip("HISTORY", isActive: !isAboutSelected),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  // ---------------------- AVATAR + PROFILE CARD (YOUR UI) ----------------------
+
+  Widget _avatarAndProfileCard(Map<String, dynamic> data) {
+    final fullName = data["fullName"] ?? "User";
+    final email = data["email"] ?? "";
+    final sex = data["sex"] ?? "Not set";
+    final birthday = data["birthday"] ?? "Not set";
+    final profileImageUrl = data["profileImageUrl"] ?? "";
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 22),
+          padding: const EdgeInsets.only(top: 80, bottom: 26),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 10,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Text(
+                fullName,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF001372),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                email,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF79838B),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _infoColumn("Sex", sex),
+                  _infoColumn("Birthday", birthday),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // --- Avatar Overlap ---
+        Positioned(
+          top: -55,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                CircleAvatar(
+                  radius: 52,
+                  backgroundColor: Colors.white,
+                  child: profileImageUrl.isNotEmpty
+                      ? CircleAvatar(
+                          radius: 48,
+                          backgroundImage: NetworkImage(profileImageUrl),
+                        )
+                      : const CircleAvatar(
+                          radius: 48,
+                          backgroundColor: Color(0xFFEAF5FD),
+                          child: Icon(Icons.person,
+                              size: 40, color: Color(0xFF6D777F)),
+                        ),
+                ),
+
+                // --- Camera button ---
+                Positioned(
+                  bottom: 3,
+                  right: 3,
+                  child: InkWell(
+                    onTap: _uploadingAvatar ? null : _pickAndUploadProfileImage,
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3B87D2),
+                        shape: BoxShape.circle,
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: _uploadingAvatar
+                          ? const Padding(
+                              padding: EdgeInsets.all(7),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white),
+                              ),
+                            )
+                          : const Icon(Icons.camera_alt,
+                              size: 16, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ---------------------- SMALL HELPERS ----------------------
+
+  Widget _infoColumn(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF001372),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            color: Color(0xFF6D777F),
+          ),
+        ),
+      ],
     );
   }
 
@@ -412,175 +541,25 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _profileHeaderCard(Map<String, dynamic> data) {
-    final String fullName = data["fullName"] ?? "No name";
-    final String email = data["email"] ?? "";
-    final String sex = data["sex"] ?? "Not set";
-    final String birthday = data["birthday"] ?? "Not set";
-    final String profileImageUrl = data["profileImageUrl"] ?? "";
-
-    Widget avatarChild;
-    if (profileImageUrl.isNotEmpty) {
-      avatarChild = CircleAvatar(
-        radius: 46,
-        backgroundImage: NetworkImage(profileImageUrl),
-      );
-    } else {
-      avatarChild = const CircleAvatar(
-        radius: 46,
-        backgroundColor: Color(0xFFEAF5FD),
-        child: Icon(
-          Icons.person,
-          size: 40,
-          color: Color(0xFF6D777F),
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(26, 28, 22, 28),
-      constraints: const BoxConstraints(minHeight: 190),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 10,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // ✅ Avatar + small camera button overlay
-          Stack(
-            alignment: Alignment.bottomRight,
-            children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.white,
-                child: avatarChild,
-              ),
-              Positioned(
-                bottom: 0,
-                right: 2,
-                child: InkWell(
-                  onTap: _uploadingAvatar ? null : _pickAndUploadProfileImage,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF3B87D2),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: _uploadingAvatar
-                        ? const Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : const Icon(Icons.photo_camera,
-                            color: Colors.white, size: 18),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 26),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  fullName,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF001372),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  email,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF79838B),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                const Text(
-                  "Sex:",
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF001372),
-                  ),
-                ),
-                Text(
-                  sex,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF6D777F),
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                const Text(
-                  "Date of Birth:",
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF001372),
-                  ),
-                ),
-                Text(
-                  birthday,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF6D777F),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _logoutButton() {
-    return FractionallySizedBox(
-      widthFactor: 0.5,
+  Widget _editProfileButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22),
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color.fromARGB(255, 238, 142, 142),
-          minimumSize: const Size(double.infinity, 44),
+          backgroundColor: const Color(0xFF3B87D2),
+          minimumSize: const Size(double.infinity, 46),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(14),
           ),
-          elevation: 3,
+          elevation: 5,
         ),
-        onPressed: _logout,
-        icon: const Icon(Icons.logout, color: Colors.white, size: 20),
+        onPressed: () {},
+        icon: const Icon(Icons.edit, color: Colors.white),
         label: const Text(
-          "Log Out",
+          "Edit Profile",
           style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
             color: Colors.white,
           ),
         ),
@@ -588,11 +567,10 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ---------- UPDATED metric tile (no ellipsis, auto-fit) ----------
   Widget _metricCard({
     required String label,
     required String value,
-    bool isNumber = false,
+    required bool isNumber,
   }) {
     return Container(
       height: 120,
@@ -622,15 +600,11 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           const SizedBox(height: 6),
-
-          // Value area
           Expanded(
             child: isNumber
-                // Big centered number
                 ? Center(
                     child: Text(
                       value,
-                      textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 30,
                         fontWeight: FontWeight.w900,
@@ -638,18 +612,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                   )
-                // Long single-word labels auto-scale to fit width (no ellipsis)
                 : Align(
                     alignment: Alignment.centerLeft,
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
                       child: Text(
                         value,
                         maxLines: 1,
                         softWrap: false,
-                        overflow: TextOverflow.visible,
-                        textWidthBasis: TextWidthBasis.longestLine,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
@@ -723,80 +693,28 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // (Old _topCard kept for compatibility; unused now)
-  Widget _topCard(
-    String title,
-    String value, {
-    double height = 120,
-    bool isFullWidth = false,
-  }) {
-    final bool isNumberOnly = RegExp(r'^\d+$').hasMatch(value.trim());
-
-    return Container(
-      height: height,
-      width: isFullWidth ? double.infinity : null,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 10,
-            offset: Offset(0, 6),
+  Widget _logoutButton() {
+    return FractionallySizedBox(
+      widthFactor: 0.5,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color.fromARGB(255, 238, 142, 142),
+          minimumSize: const Size(double.infinity, 44),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
           ),
-        ],
-        border: Border.all(color: const Color(0xFFE8EEF5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 11,
-              letterSpacing: 1.1,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF9EACB7),
-            ),
+          elevation: 3,
+        ),
+        onPressed: _logout,
+        icon: const Icon(Icons.logout, color: Colors.white),
+        label: const Text(
+          "Log Out",
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
-
-          // VALUE
-          Expanded(
-            child: isNumberOnly
-                ? Center(
-                    child: Text(
-                      value,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF001372),
-                      ),
-                    ),
-                  )
-                : Align(
-                    alignment: Alignment.centerLeft,
-                    // Shrink LONG single words to fit on ONE line — no ellipsis.
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        value,
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.visible,
-                        textWidthBasis: TextWidthBasis.longestLine,
-                        style: const TextStyle(
-                          fontSize: 20, // will scale down as needed
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF001372),
-                        ),
-                      ),
-                    ),
-                  ),
-          ),
-        ],
+        ),
       ),
     );
   }

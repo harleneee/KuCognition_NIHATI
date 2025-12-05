@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+
 import 'scan_page.dart';
 import 'profile_page.dart';
 import 'chatbot_page.dart';
@@ -21,6 +24,40 @@ class DashboardScreen extends StatelessWidget {
 
   const DashboardScreen({super.key, this.username});
 
+  // ---------------------------------------
+  // NEW: fetch last scan
+  // ---------------------------------------
+Future<String> getLastScanText() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return "none";
+
+  final snap = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .collection('history')
+      .orderBy('timestamp', descending: true)
+      .limit(1)
+      .get();
+
+  if (snap.docs.isEmpty) return "none";
+
+  final data = snap.docs.first.data();
+  if (data['timestamp'] is! Timestamp) return "none";
+
+  final ts = (data['timestamp'] as Timestamp).toDate();
+
+  // FORMAT DATE
+  final date = DateFormat('MMMM d, yyyy').format(ts).toUpperCase();
+
+  // FORMAT TIME (12-hour format)
+  final time = DateFormat('h:mm a').format(ts); // Example: 3:42 PM
+
+  return "$date • $time";
+}
+
+
+  // ---------------------------------------
+
   String welcomeText() {
     final clean = username?.trim();
     if (clean != null && clean.isNotEmpty) {
@@ -31,7 +68,6 @@ class DashboardScreen extends StatelessWidget {
 
   Future<void> logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
-    // clear stack and go to login screen
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
@@ -78,10 +114,10 @@ class DashboardScreen extends StatelessWidget {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15), // stronger shadow
+              color: Colors.black.withOpacity(0.15),
               blurRadius: 18,
               spreadRadius: 2,
-              offset: const Offset(0, -2), // shadow goes upward
+              offset: const Offset(0, -2),
             ),
           ],
         ),
@@ -91,7 +127,7 @@ class DashboardScreen extends StatelessWidget {
           children: [
             BottomAppBar(
               height: 70,
-              elevation: 0, // use container shadow instead
+              elevation: 0,
               shape: const CircularNotchedRectangle(),
               notchMargin: 8,
               color: Colors.white,
@@ -179,7 +215,7 @@ class DashboardScreen extends StatelessWidget {
       body: SafeArea(
         child: Stack(
           children: [
-            // soft background blobs
+            // soft background circles
             Positioned(
               top: -40,
               right: -30,
@@ -226,7 +262,7 @@ class DashboardScreen extends StatelessWidget {
                           SectionTitle(title: 'Recent Scans'),
                           RecentScansCard(),
                           SectionTitle(title: 'Health Tips'),
-                          _HealthTipsCarousel(), // ⬅️ carousel now
+                          _HealthTipsCarousel(),
                         ],
                       ),
                     ),
@@ -259,7 +295,8 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // --- HEADER: "Welcome, {username}!" + Logout ---
+  // HEADER ------------------------------------------------------
+
   Widget buildHeader(BuildContext context) {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
@@ -295,7 +332,6 @@ class DashboardScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    // Replace with Logo Image from Assets
                     Image.asset(
                       'assets/images/logo.png',
                       width: 50,
@@ -330,9 +366,10 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ],
             ),
+
             const SizedBox(height: 20),
 
-            // welcome text + desc
+            // welcome text + fingerprint icon
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -360,6 +397,7 @@ class DashboardScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+
                 const SizedBox(width: 16),
                 const Icon(
                   Icons.fingerprint,
@@ -374,7 +412,8 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // --- SCAN CARD ---
+  // SCAN CARD ---------------------------------------------------
+
   Widget buildScanActionCard(BuildContext context) {
     return Transform.translate(
       offset: const Offset(0, -18),
@@ -399,18 +438,30 @@ class DashboardScreen extends StatelessWidget {
                     color: AppColors.primaryBlue,
                   ),
                 ),
+
                 const SizedBox(height: 4),
+
+                // ⭐ UPDATED: Real Last Scan
                 Row(
-                  children: const [
-                    Icon(Icons.access_time, size: 16, color: Colors.grey),
-                    SizedBox(width: 6),
-                    Text(
-                      'Last Scan: none',
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                  children: [
+                    const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                    const SizedBox(width: 6),
+
+                    FutureBuilder<String>(
+                      future: getLastScanText(),
+                      builder: (context, snapshot) {
+                        final text = snapshot.data ?? "none";
+                        return Text(
+                          "Last Scan: $text",
+                          style: const TextStyle(color: Colors.grey, fontSize: 13),
+                        );
+                      },
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 14),
+
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
@@ -454,7 +505,8 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // --- RECOMMENDED TOPICS (KuBot) ---
+  // QUICK ANSWERS WITH KUBOT -------------------------------------
+
   Widget buildRecommendedTopics(BuildContext context) {
     final List<Map<String, dynamic>> topics = [
       {
