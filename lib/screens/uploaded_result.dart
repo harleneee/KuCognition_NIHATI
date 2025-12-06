@@ -230,230 +230,253 @@ class UploadedResult extends StatelessWidget {
         ),
       ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(22, 8, 22, 22),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ------------------------------
-            // File name card (cleaned UI)
-            // ------------------------------
-            const Text(
-              "Uploaded",
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF666666),
+      // ✅ ONLY ADD: bgg.jpg background wrapped around existing body
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/bgg.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(22, 8, 22, 22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ------------------------------
+              // File name card (cleaned UI)
+              // ------------------------------
+              const Text(
+                "Uploaded",
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF666666),
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
+              const SizedBox(height: 6),
 
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF3B87D2), width: 1),
-              ),
-              child: Text(fileName, style: const TextStyle(fontSize: 12)),
-            ),
-
-            const SizedBox(height: 18),
-
-            const Text(
-              "Uploaded",
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF666666),
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // ------------------------------
-            // Modern Image Preview
-            // ------------------------------
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                height: 220,
-                decoration: BoxDecoration(color: Colors.white),
-                child: imagePath != null
-                    ? Image.file(File(imagePath), fit: BoxFit.cover)
-                    : const Center(
-                        child: Icon(
-                          Icons.image_not_supported_outlined,
-                          size: 40,
-                        ),
-                      ),
-              ),
-            ),
-
-            const SizedBox(height: 6),
-            Text(
-              "$fileName uploaded successfully",
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF1B7A36)),
-            ),
-
-            const SizedBox(height: 20),
-
-            // ------------------------------
-            // Prediction Card (NEW STYLE)
-            // ------------------------------
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.10),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    displayName,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-
-                  if (color != null || texture != null || shape != null)
-                    Text(
-                      [
-                        if (color != null) "• Color: $color",
-                        if (texture != null) "• Texture: $texture",
-                        if (shape != null) "• Shape: $shape",
-                      ].join("\n"),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 13, height: 1.35),
-                    ),
-
-                  const SizedBox(height: 16),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _pill(
-                          label: "Confidence",
-                          value: confidenceText,
-                          bgColor: const Color(0xFFE3F2FD),
-                          textColor: const Color(0xFF1E88E5),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _pill(
-                          label: "Risk",
-                          value: risk,
-                          bgColor: risk == "High"
-                              ? const Color(0xFFFFE5E7)
-                              : risk == "Moderate"
-                              ? const Color(0xFFFFF5D9)
-                              : Colors.grey.shade200,
-                          textColor: risk == "High"
-                              ? const Color(0xFFCC1C1C)
-                              : risk == "Moderate"
-                              ? const Color(0xFFDE7F00)
-                              : Colors.grey.shade800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 22),
-
-            // ------------------------------
-            // Description Card (modern white card)
-            // ------------------------------
-            Container(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    displayName,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    description,
-                    style: const TextStyle(fontSize: 13, height: 1.45),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 26),
-
-            // ------------------------------
-            // Gradient Button (KuCognition style)
-            // ------------------------------
-            SizedBox(
-              height: 46,
-              child: Container(
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF3B87D2), Color(0xFF2361C9)],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border:
+                      Border.all(color: const Color(0xFF3B87D2), width: 1),
                 ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/result_page',
-                      arguments: {
-                        'imagePath': imagePath,
-                        'label': predictionKey,
-                        'confidence': modelConfidence,
-                      },
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                child:
+                    Text(fileName, style: const TextStyle(fontSize: 12)),
+              ),
+
+              const SizedBox(height: 18),
+
+              const Text(
+                "Uploaded",
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF666666),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // ------------------------------
+              // Modern Image Preview
+              // ------------------------------
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  height: 220,
+                  decoration: const BoxDecoration(color: Colors.white),
+                  child: imagePath != null
+                      ? Image.file(File(imagePath), fit: BoxFit.cover)
+                      : const Center(
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            size: 40,
+                          ),
+                        ),
+                ),
+              ),
+
+              const SizedBox(height: 6),
+              Text(
+                "$fileName uploaded successfully",
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 11, color: Color(0xFF1B7A36)),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ------------------------------
+              // Prediction Card (NEW STYLE)
+              // ------------------------------
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.10),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      displayName,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+
+                    if (color != null ||
+                        texture != null ||
+                        shape != null)
+                      Text(
+                        [
+                          if (color != null) "• Color: $color",
+                          if (texture != null) "• Texture: $texture",
+                          if (shape != null) "• Shape: $shape",
+                        ].join("\n"),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontSize: 13, height: 1.35),
+                      ),
+
+                    const SizedBox(height: 16),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _pill(
+                            label: "Confidence",
+                            value: confidenceText,
+                            bgColor: const Color(0xFFE3F2FD),
+                            textColor: const Color(0xFF1E88E5),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _pill(
+                            label: "Risk",
+                            value: risk,
+                            bgColor: risk == "High"
+                                ? const Color(0xFFFFE5E7)
+                                : risk == "Moderate"
+                                    ? const Color(0xFFFFF5D9)
+                                    : Colors.grey.shade200,
+                            textColor: risk == "High"
+                                ? const Color(0xFFCC1C1C)
+                                : risk == "Moderate"
+                                    ? const Color(0xFFDE7F00)
+                                    : Colors.grey.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 22),
+
+              // ------------------------------
+              // Description Card (modern white card)
+              // ------------------------------
+              Container(
+                padding:
+                    const EdgeInsets.fromLTRB(20, 18, 20, 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayName,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      description,
+                      style: const TextStyle(
+                          fontSize: 13, height: 1.45),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 26),
+
+              // ------------------------------
+              // Gradient Button (KuCognition style)
+              // ------------------------------
+              SizedBox(
+                height: 46,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF3B87D2),
+                        Color(0xFF2361C9)
+                      ],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text(
-                    "View full results here",
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/result_page',
+                        arguments: {
+                          'imagePath': imagePath,
+                          'label': predictionKey,
+                          'confidence': modelConfidence,
+                        },
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "View full results here",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -478,7 +501,10 @@ class UploadedResult extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.8)),
+            style: TextStyle(
+              fontSize: 12,
+              color: textColor.withOpacity(0.8),
+            ),
           ),
           const SizedBox(height: 4),
           Text(

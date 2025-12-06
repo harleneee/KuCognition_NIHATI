@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // ✅ added
 
 // ✅ NEW imports for PDF export
 import 'package:pdf/pdf.dart';
@@ -302,6 +303,32 @@ class ResultPage extends StatelessWidget {
     if (risk == "Moderate") riskColor = Colors.orange.shade700;
     if (risk == "Low") riskColor = Colors.green.shade700;
 
+    String riskHint;
+    switch (risk) {
+      case 'High':
+        riskHint = 'Consider prompt medical follow-up.';
+        break;
+      case 'Moderate':
+        riskHint = 'Monitor and discuss with a professional.';
+        break;
+      case 'Low':
+        riskHint = 'Monitor for any new or changing signs.';
+        break;
+      default:
+        riskHint = 'Interpret this result with a professional if unsure.';
+    }
+
+    // 1-line summary from underlyingIntro / whyMatters
+    String? summaryLine;
+    if (underlyingIntro != null && underlyingIntro.isNotEmpty) {
+      final firstDot = underlyingIntro.indexOf('.');
+      summaryLine =
+          firstDot > 0 ? underlyingIntro.substring(0, firstDot + 1) : underlyingIntro;
+    } else if (whyMatters != null && whyMatters.isNotEmpty) {
+      final firstDot = whyMatters.indexOf('.');
+      summaryLine = firstDot > 0 ? whyMatters.substring(0, firstDot + 1) : whyMatters;
+    }
+
     void goToDashboard(BuildContext ctx) {
       Navigator.pushNamedAndRemoveUntil(
         ctx,
@@ -312,14 +339,14 @@ class ResultPage extends StatelessWidget {
 
     // ✅ Decide which image widget to show
     Widget imageWidget;
-    if (imageUrl != null && imageUrl!.isNotEmpty) {
+    if (imageUrl != null && imageUrl.isNotEmpty) {
       imageWidget = Image.network(
-        imageUrl!,
+        imageUrl,
         fit: BoxFit.cover,
       );
-    } else if (imagePath != null && imagePath!.isNotEmpty) {
+    } else if (imagePath != null && imagePath.isNotEmpty) {
       imageWidget = Image.file(
-        File(imagePath!),
+        File(imagePath),
         fit: BoxFit.cover,
       );
     } else {
@@ -328,7 +355,7 @@ class ResultPage extends StatelessWidget {
       );
     }
 
-    // ✅ NEW: PDF download helper, using the same data as the screen
+    // ✅ PDF download helper (unchanged logic)
     Future<void> _downloadPdf() async {
       final pdf = pw.Document();
 
@@ -381,13 +408,11 @@ class ResultPage extends StatelessWidget {
             if (underlyingIntro != null && underlyingIntro.isNotEmpty)
               pw.Text(underlyingIntro),
             pw.SizedBox(height: 6),
-            if (underlyingMetabolic != null &&
-                underlyingMetabolic.isNotEmpty)
+            if (underlyingMetabolic != null && underlyingMetabolic.isNotEmpty)
               pw.Bullet(text: underlyingMetabolic),
             if (underlyingImmune != null && underlyingImmune.isNotEmpty)
               pw.Bullet(text: underlyingImmune),
-            if (underlyingNutrient != null &&
-                underlyingNutrient.isNotEmpty)
+            if (underlyingNutrient != null && underlyingNutrient.isNotEmpty)
               pw.Bullet(text: underlyingNutrient),
             if (underlyingOrgan != null && underlyingOrgan.isNotEmpty)
               pw.Bullet(text: underlyingOrgan),
@@ -451,233 +476,396 @@ class ResultPage extends StatelessWidget {
       }
     }
 
+    // ✅ dynamic top padding so content starts *below* status bar + AppBar
+    final double contentTopPadding =
+        MediaQuery.of(context).padding.top + kToolbarHeight + 8;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFEAF5FD),
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF001372)),
           onPressed: () => goToDashboard(context),
         ),
-        title: const Text(
-          "AI Nail Scan Result",
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF001372),
+        centerTitle: true,
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Scan Result",
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF001372),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              "$label • $confString • $risk",
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/bgg.jpg'),
+            fit: BoxFit.cover,
           ),
         ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 26),
         child: Column(
           children: [
-            /// IMAGE CARD
-            ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Container(
-                height: 240,
-                color: Colors.white,
-                child: imageWidget,
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            /// CONDITION HEADER
-            _infoCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _header("Detected Condition"),
-                  const SizedBox(height: 6),
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF001372),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            /// CONFIDENCE + RISK
-            Row(
-              children: [
-                Expanded(
-                  child: _badgeCard(
-                    title: "Confidence",
-                    value: confString,
-                    textColor: Colors.blue.shade700,
-                    color: Colors.blue.shade50,
-                  ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  18,
+                  contentTopPadding, // ✅ use dynamic padding here
+                  18,
+                  12,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _badgeCard(
-                    title: "Risk Level",
-                    value: risk,
-                    textColor: riskColor,
-                    color: riskColor.withOpacity(.15),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 18),
-
-            /// SCANNED NAIL DESCRIPTION
-            _infoCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _header("Scanned Nail Description"),
-                  const SizedBox(height: 10),
-                  if (scannedColor != null && scannedColor.isNotEmpty)
-                    _bulletBlock("Color", scannedColor),
-                  if (scannedTexture != null && scannedTexture.isNotEmpty)
-                    const SizedBox(height: 8),
-                  if (scannedTexture != null && scannedTexture.isNotEmpty)
-                    _bulletBlock("Texture & Growth", scannedTexture),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 18),
-
-            /// POSSIBLE SIGN OF UNDERLYING CONDITION
-            _infoCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _header("Possible Sign of Underlying Condition"),
-                  const SizedBox(height: 10),
-                  if (underlyingIntro != null && underlyingIntro.isNotEmpty)
-                    Text(
-                      underlyingIntro,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        color: Colors.black87,
-                        height: 1.45,
-                      ),
-                    ),
-                  const SizedBox(height: 10),
-                  if (underlyingMetabolic != null &&
-                      underlyingMetabolic.isNotEmpty)
-                    _simpleBullet(underlyingMetabolic),
-                  if (underlyingImmune != null && underlyingImmune.isNotEmpty)
-                    _simpleBullet(underlyingImmune),
-                  if (underlyingNutrient != null &&
-                      underlyingNutrient.isNotEmpty)
-                    _simpleBullet(underlyingNutrient),
-                  if (underlyingOrgan != null && underlyingOrgan.isNotEmpty)
-                    _simpleBullet(underlyingOrgan),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 18),
-
-            /// NEXT STEPS & RECOMMENDATIONS
-            if (nextSteps != null && nextSteps.isNotEmpty)
-              _infoCard(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _header("Next Steps & Recommendations"),
-                    const SizedBox(height: 10),
-                    Text(
-                      nextSteps,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        height: 1.45,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            const SizedBox(height: 18),
-
-            /// WHY THIS MATTERS (blue card)
-            if (whyMatters != null && whyMatters.isNotEmpty)
-              _infoCard(
-                background: const Color(0xFFDCEFFF),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _header("Why This Matters"),
-                    const SizedBox(height: 10),
-                    Text(
-                      whyMatters,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        color: Colors.black87,
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            const SizedBox(height: 26),
-
-            /// ACTION BUTTONS → Download + Dashboard
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _downloadPdf,
-                    icon: const Icon(Icons.download_rounded, size: 18),
-                    label: const Text('Download PDF'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF3B87D2),
-                      side: const BorderSide(
-                        color: Color(0xFF3B87D2),
-                        width: 1.2,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 13,
-                        horizontal: 8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => goToDashboard(context),
-                      style: _buttonStyle(primary: const Color(0xFF3B87D2)),
-                      child: const Text(
-                        "Done",
-                        style: TextStyle(
-                          color: Colors.white, // ✅ make sure it’s visible
-                          fontWeight: FontWeight.w600,
+                    // IMAGE CARD with overlay label
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: Container(
+                        height: 240,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.12),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Stack(
+                          children: [
+                            Positioned.fill(child: imageWidget),
+                            Positioned(
+                              left: 12,
+                              top: 12,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.6),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: const Text(
+                                  "AI Scan Image",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ),
+
+                    const SizedBox(height: 12),
+
+                    const Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        "This is AI pattern analysis — NOT a medical diagnosis.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: Colors.red,
+                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // HERO SUMMARY CARD
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 14,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            label,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF001372),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              _riskChip(risk, riskColor),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _confidenceBar(
+                                  confidence: confidence,
+                                  displayText: confString,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          if (summaryLine != null && summaryLine.isNotEmpty)
+                            Text(
+                              summaryLine,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.black87,
+                                height: 1.4,
+                              ),
+                            ),
+                          const SizedBox(height: 4),
+                          Text(
+                            riskHint,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: riskColor.withOpacity(0.9),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // SCANNED NAIL DESCRIPTION
+                    _infoCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _sectionHeader(
+                            icon: Icons.search_rounded,
+                            label: "Scanned Nail Description",
+                          ),
+                          const SizedBox(height: 10),
+                          if (scannedColor != null && scannedColor.isNotEmpty)
+                            _bulletBlock("Color", scannedColor),
+                          if (scannedTexture != null &&
+                              scannedTexture.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            _bulletBlock("Texture & Growth", scannedTexture),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // POSSIBLE SIGN OF UNDERLYING CONDITION
+                    _infoCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _sectionHeader(
+                            icon: Icons.health_and_safety_rounded,
+                            label: "Possible Sign of Underlying Condition",
+                          ),
+                          const SizedBox(height: 10),
+                          if (underlyingIntro != null &&
+                              underlyingIntro.isNotEmpty)
+                            Text(
+                              underlyingIntro,
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                color: Colors.black87,
+                                height: 1.45,
+                              ),
+                            ),
+                          const SizedBox(height: 10),
+                          if (underlyingMetabolic != null &&
+                              underlyingMetabolic.isNotEmpty)
+                            _simpleBullet(underlyingMetabolic),
+                          if (underlyingImmune != null &&
+                              underlyingImmune.isNotEmpty)
+                            _simpleBullet(underlyingImmune),
+                          if (underlyingNutrient != null &&
+                              underlyingNutrient.isNotEmpty)
+                            _simpleBullet(underlyingNutrient),
+                          if (underlyingOrgan != null &&
+                              underlyingOrgan.isNotEmpty)
+                            _simpleBullet(underlyingOrgan),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // NEXT STEPS
+                    if (nextSteps != null && nextSteps.isNotEmpty)
+                      _infoCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _sectionHeader(
+                              icon: Icons.checklist_rounded,
+                              label: "Next Steps & Recommendations",
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              nextSteps,
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                height: 1.45,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 18),
+
+                    // WHY THIS MATTERS
+                    if (whyMatters != null && whyMatters.isNotEmpty)
+                      _infoCard(
+                        background: const Color(0xFFDCEFFF),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _sectionHeader(
+                              icon: Icons.info_rounded,
+                              label: "Why This Matters",
+                              color: const Color(0xFF001372),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              whyMatters,
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                color: Colors.black87,
+                                height: 1.45,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              "If this result worries you, consider sharing this report with a healthcare professional for proper examination.",
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: Color(0xFF1A3E72),
+                                fontStyle: FontStyle.italic,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 12),
+
+                    const Text(
+                      "Results are for informational support only and should not replace professional medical evaluation.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        color: Colors.black54,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+                  ],
                 ),
-              ],
+              ),
             ),
 
-            const SizedBox(height: 16),
-            const Text(
-              "This is AI pattern analysis — NOT a medical diagnosis.",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 10, color: Colors.red),
+            // ✅ STICKY BOTTOM ACTION BAR
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.96),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.12),
+                        blurRadius: 14,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _downloadPdf,
+                          icon: const Icon(Icons.download_rounded, size: 18),
+                          label: const Text('Download PDF'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF3B87D2),
+                            side: const BorderSide(
+                              color: Color(0xFF3B87D2),
+                              width: 1.2,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 11,
+                              horizontal: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => goToDashboard(context),
+                            style:
+                                _buttonStyle(primary: const Color(0xFF3B87D2)),
+                            child: const Text(
+                              "Done",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -698,8 +886,44 @@ class ResultPage extends StatelessWidget {
         ),
       );
 
+  Widget _sectionHeader({
+    required IconData icon,
+    required String label,
+    Color color = const Color(0xFF001372),
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(
+            icon,
+            size: 14,
+            color: color,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w800,
+            color: color,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _infoCard({required Widget child, Color background = Colors.white}) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: background,
@@ -795,6 +1019,80 @@ class ResultPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  static Widget _riskChip(String risk, Color riskColor) {
+    IconData icon;
+    switch (risk) {
+      case 'High':
+        icon = Icons.error_rounded;
+        break;
+      case 'Moderate':
+        icon = Icons.warning_amber_rounded;
+        break;
+      case 'Low':
+        icon = Icons.check_circle_rounded;
+        break;
+      default:
+        icon = Icons.help_rounded;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: riskColor.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: riskColor),
+          const SizedBox(width: 6),
+          Text(
+            risk,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: riskColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _confidenceBar({
+    required double? confidence,
+    required String displayText,
+  }) {
+    double? value;
+    if (confidence != null) {
+      value = confidence.clamp(0.0, 1.0);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Confidence: $displayText",
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1E88E5),
+          ),
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: value,
+            minHeight: 6,
+            backgroundColor: const Color(0xFFE3F2FD),
+            valueColor: const AlwaysStoppedAnimation(Color(0xFF1E88E5)),
+          ),
+        ),
+      ],
     );
   }
 

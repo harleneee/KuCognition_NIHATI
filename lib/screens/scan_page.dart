@@ -306,7 +306,10 @@ class _ScanPageState extends State<ScanPage> {
                 ),
                 child: const Text(
                   "View full results here",
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white, // ✅ make button text white
+                  ),
                 ),
               ),
             ),
@@ -431,11 +434,11 @@ class _ScanPageState extends State<ScanPage> {
                       const SizedBox(height: 16),
 
                       // SCROLL AREA -----------------------
-                      Expanded(
+                      const Expanded(
                         child: SingleChildScrollView(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               SizedBox(height: 6),
                               _GuidelineRow(
                                 icon: Icons.wb_sunny_outlined,
@@ -473,7 +476,7 @@ class _ScanPageState extends State<ScanPage> {
                                 spans: [
                                   TextSpan(
                                     text:
-                                    'Keep the nail flat to the camera, filling ',
+                                        'Keep the nail flat to the camera, filling ',
                                     style: TextStyle(color: Color(0xFF4E5A65)),
                                   ),
                                   TextSpan(
@@ -581,17 +584,18 @@ class _ScanPageState extends State<ScanPage> {
                         child: ElevatedButton(
                           onPressed: () => Navigator.of(context).pop(),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF3B87D2),
+                            backgroundColor: const Color(0xFF3B87D2),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
-                            padding: EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           child: const Text(
                             'Got it!',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
+                              color: Colors.white, // ✅ make button text white
                             ),
                           ),
                         ),
@@ -606,6 +610,7 @@ class _ScanPageState extends State<ScanPage> {
       },
     );
   }
+
   // =====================================================================
   // ⭐ UI (inspo-style)  + pinned footer
   // =====================================================================
@@ -888,6 +893,33 @@ class _ScanPageState extends State<ScanPage> {
             bottom: 0,
             child: footerBar,
           ),
+
+          // ⭐ LOADING OVERLAY WHILE API IS RUNNING
+          if (_loading)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.35),
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                      SizedBox(height: 12),
+                      Text(
+                        'Analyzing scan...',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -976,7 +1008,11 @@ class _GuidelineRow extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 2),
-          child: Icon(icon, size: 18, color: Color(0xFF3B87D2)),
+          child: Icon(
+            icon,
+            size: 18,
+            color: const Color(0xFF3B87D2),
+          ),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -986,3 +1022,4 @@ class _GuidelineRow extends StatelessWidget {
     );
   }
 }
+
