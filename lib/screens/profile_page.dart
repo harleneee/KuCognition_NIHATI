@@ -27,7 +27,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadUserData();
   }
 
-  // ---------------------- LOAD USER DATA + HISTORY ----------------------
+  // ---------------------- LOAD USER DATA + HISTORY (PH TIME FIXED) ----------------------
 
   Future<void> _loadUserData() async {
     try {
@@ -74,15 +74,21 @@ class _ProfilePageState extends State<ProfilePage> {
       String lastScan = "No scans yet";
 
       if (historySnap.docs.isNotEmpty) {
-        final lastDoc = historySnap.docs.first.data() as Map<String, dynamic>? ?? {};
-        final String lastLabel = lastDoc['predictionLabel'] ?? 'Unknown condition';
+        final lastDoc =
+            historySnap.docs.first.data() as Map<String, dynamic>? ?? {};
+
+        final String lastLabel =
+            lastDoc['predictionLabel'] ?? 'Unknown condition';
 
         final tsRaw = lastDoc['timestamp'];
         String datePart = "";
 
+        // ⭐⭐⭐ PH TIME FIX HERE ⭐⭐⭐
         if (tsRaw is Timestamp) {
-          final dt = tsRaw.toDate();
-          datePart = DateFormat('MMMM d, yyyy – h:mm a').format(dt); // nicer format
+          final utc = tsRaw.toDate();
+          final phTime = utc.add(const Duration(hours: 8)); // PH TIME
+          datePart =
+              DateFormat('MMMM d, yyyy – h:mm a').format(phTime);
         }
 
         lastScan = datePart.isNotEmpty ? "$lastLabel • $datePart" : lastLabel;
@@ -212,7 +218,7 @@ class _ProfilePageState extends State<ProfilePage> {
     Navigator.pushReplacementNamed(context, "/login");
   }
 
-  // ---------------------- UI BUILD ----------------------
+  // ---------------------- UI BUILD (WITH BACKGROUND IMAGE) ----------------------
 
   @override
   Widget build(BuildContext context) {
@@ -232,77 +238,90 @@ class _ProfilePageState extends State<ProfilePage> {
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFEAF5FD),
-        body: SingleChildScrollView(
-          child: Column(
-            children: [
-              _header(),
+        body: Stack(
+          children: [
+            // ⭐ BACKGROUND IMAGE
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/bgg.jpg',
+                fit: BoxFit.cover,
+              ),
+            ),
 
-              const SizedBox(height: 20),
+            // MAIN PAGE CONTENT
+            SingleChildScrollView(
+              child: Column(
+                children: [
+                  _header(),
 
-              _avatarAndProfileCard(data),
+                  const SizedBox(height: 20),
 
-              const SizedBox(height: 25),
+                  _avatarAndProfileCard(data),
 
-              if (isAboutSelected) ...[
-                _editProfileButton(),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 25),
 
-                // METRICS
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 22),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _metricCard(
-                          label: "TOTAL SCANS",
-                          value: (data["totalScans"] ?? 0).toString(),
-                          isNumber: true,
-                        ),
+                  if (isAboutSelected) ...[
+                    _editProfileButton(),
+                    const SizedBox(height: 24),
+
+                    // METRICS
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _metricCard(
+                              label: "TOTAL SCANS",
+                              value: (data["totalScans"] ?? 0).toString(),
+                              isNumber: true,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: _metricCard(
+                              label: "MOST COMMON RESULT",
+                              value: (data["mostCommonResult"] ?? "None yet")
+                                  .toString(),
+                              isNumber: false,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: _metricCard(
-                          label: "MOST COMMON RESULT",
-                          value: (data["mostCommonResult"] ?? "None yet")
-                              .toString(),
-                          isNumber: false,
-                        ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // LAST SCAN CARD
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                      child: _lastScanCard(
+                        title: "LAST SCAN",
+                        line1: (data["lastScan"] ?? "No scans yet")
+                            .toString()
+                            .split(" • ")
+                            .first,
+                        line2: (() {
+                          final parts =
+                              (data["lastScan"] ?? "").toString().split(" • ");
+                          return parts.length > 1 ? parts.last : null;
+                        })(),
                       ),
-                    ],
-                  ),
-                ),
+                    ),
 
-                const SizedBox(height: 14),
-
-                // LAST SCAN CARD
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 22),
-                  child: _lastScanCard(
-                    title: "LAST SCAN",
-                    line1: (data["lastScan"] ?? "No scans yet")
-                        .toString()
-                        .split(" • ")
-                        .first,
-                    line2: (() {
-                      final parts =
-                          (data["lastScan"] ?? "").toString().split(" • ");
-                      return parts.length > 1 ? parts.last : null;
-                    })(),
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-                _logoutButton(),
-                const SizedBox(height: 80),
-              ]
-            ],
-          ),
+                    const SizedBox(height: 40),
+                    _logoutButton(),
+                    const SizedBox(height: 80),
+                  ]
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // ---------------------- HEADER UI (YOUR VERSION) ----------------------
+  // ---------------------- HEADER UI ----------------------
 
   Widget _header() {
     return Container(
@@ -327,7 +346,8 @@ class _ProfilePageState extends State<ProfilePage> {
             Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
+                  icon:
+                      const Icon(Icons.arrow_back, color: Colors.white, size: 26),
                   onPressed: () {
                     Navigator.pushNamedAndRemoveUntil(
                         context, '/dashboard', (_) => false);
@@ -359,13 +379,15 @@ class _ProfilePageState extends State<ProfilePage> {
                 children: [
                   GestureDetector(
                     onTap: () => setState(() => isAboutSelected = true),
-                    child: _tabChip("ABOUT", isActive: isAboutSelected),
+                    child:
+                        _tabChip("ABOUT", isActive: isAboutSelected),
                   ),
                   const SizedBox(width: 4),
                   GestureDetector(
                     onTap: () =>
                         Navigator.pushReplacementNamed(context, '/history'),
-                    child: _tabChip("HISTORY", isActive: !isAboutSelected),
+                    child:
+                        _tabChip("HISTORY", isActive: !isAboutSelected),
                   ),
                 ],
               ),
@@ -376,7 +398,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ---------------------- AVATAR + PROFILE CARD (YOUR UI) ----------------------
+  // ---------------------- AVATAR + PROFILE CARD ----------------------
 
   Widget _avatarAndProfileCard(Map<String, dynamic> data) {
     final fullName = data["fullName"] ?? "User";
@@ -432,7 +454,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
 
-        // --- Avatar Overlap ---
+        // Avatar Overlap
         Positioned(
           top: -55,
           left: 0,
@@ -457,7 +479,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                 ),
 
-                // --- Camera button ---
+                // Camera Button
                 Positioned(
                   bottom: 3,
                   right: 3,
@@ -481,8 +503,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               padding: EdgeInsets.all(7),
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
                           : const Icon(Icons.camera_alt,

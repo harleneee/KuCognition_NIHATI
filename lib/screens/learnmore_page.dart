@@ -9,98 +9,77 @@ const Color _bgBlue = Color(0xFFEAF5FD);
 class LearnMorePage extends StatelessWidget {
   LearnMorePage({super.key});
 
-  // title + corresponding image in assets/images/
   final List<Map<String, String>> items = const [
-    {
-      "title": "Blue Finger/Bluish nail (Cyanosis)",
-      "image": "assets/images/cyanosis.jpg",
-    },
-    {
-      "title": "Clubbing",
-      "image": "assets/images/clubbing.jpg",
-    },
-    {
-      "title": "Onychomycosis",
-      "image": "assets/images/onychomycosis.jpg",
-    },
-    {
-      "title": "Psoriasis",
-      "image": "assets/images/psoriasis.jpg",
-    },
-    {
-      "title": "Healthy Nail",
-      "image": "assets/images/healthy.jpg",
-    },
-    {
-      "title": "Acral Lentiginous Melanoma",
-      "image": "assets/images/melanoma.jpg",
-    },
-    {
-      "title": "Onychogryphosis",
-      "image": "assets/images/onychogryphosis.jpg",
-    },
-    {
-      "title": "Pitting",
-      "image": "assets/images/pitting.jpg",
-    },
-    {
-      "title": "Yellow Nail",
-      "image": "assets/images/yellownail.jpg",
-    },
-    {
-      "title": "White Nail",
-      "image": "assets/images/whitenail.jpg",
-    },
-    {
-      "title": "Beau’s line",
-      "image": "assets/images/beausline.jpg",
-    },
-    {
-      "title": "Koilonychia",
-      "image": "assets/images/koilonychia.jpg",
-    },
+    {"title": "Blue Finger/Bluish nail (Cyanosis)", "image": "assets/images/cyanosis.jpg"},
+    {"title": "Clubbing", "image": "assets/images/clubbing.jpg"},
+    {"title": "Onychomycosis", "image": "assets/images/onychomycosis.jpg"},
+    {"title": "Psoriasis", "image": "assets/images/psoriasis.jpg"},
+    {"title": "Healthy Nail", "image": "assets/images/healthy.jpg"},
+    {"title": "Acral Lentiginous Melanoma", "image": "assets/images/melanoma.jpg"},
+    {"title": "Onychogryphosis", "image": "assets/images/onychogryphosis.jpg"},
+    {"title": "Pitting", "image": "assets/images/pitting.jpg"},
+    {"title": "Yellow Nail", "image": "assets/images/yellownail.jpg"},
+    {"title": "White Nail", "image": "assets/images/whitenail.jpg"},
+    {"title": "Beau’s line", "image": "assets/images/beausline.jpg"},
+    {"title": "Koilonychia", "image": "assets/images/koilonychia.jpg"},
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgBlue,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const _LearnMoreHeader(),
-            const SizedBox(height: 8),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  return _DiseaseTile(
-                    title: item["title"]!,
-                    imagePath: item["image"]!,
-                    index: index,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              DiseaseDetailsPage(disease: item["title"]!),
-                        ),
+      body: Stack(
+        children: [
+
+          // ⭐ BACKGROUND IMAGE
+          Positioned.fill(
+            child: Image.asset(
+              "assets/images/bgg.jpg",
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // ⭐ FOREGROUND CONTENT
+          SafeArea(
+            child: Column(
+              children: [
+                const _LearnMoreHeader(),
+                const SizedBox(height: 8),
+
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+                      return _DiseaseTile(
+                        title: item["title"]!,
+                        imagePath: item["image"]!,
+                        index: index,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  DiseaseDetailsPage(disease: item["title"]!),
+                            ),
+                          );
+                        },
                       );
                     },
-                  );
-                },
-              ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// HEADER WITH GRADIENT + TITLE, BACK GOES TO ScanPage
+// ============================================================================
+// HEADER
+// ============================================================================
 class _LearnMoreHeader extends StatelessWidget {
   const _LearnMoreHeader();
 
@@ -108,7 +87,6 @@ class _LearnMoreHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // soft circles
         SizedBox(
           height: 170,
           child: Stack(
@@ -158,7 +136,6 @@ class _LearnMoreHeader extends StatelessWidget {
 
           child: Column(
             children: [
-              // Back button aligned left
               Row(
                 children: [
                   IconButton(
@@ -177,7 +154,6 @@ class _LearnMoreHeader extends StatelessWidget {
                 ],
               ),
 
-              // CENTERED TITLE & SUBTITLE
               Column(
                 children: const [
                   Text(
@@ -191,14 +167,12 @@ class _LearnMoreHeader extends StatelessWidget {
                       letterSpacing: 0.6,
                     ),
                   ),
-
                   SizedBox(height: 6),
-
                   Text(
                     "Explore nail indicators and what they may say\nabout your overall health.",
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 14,         
+                      fontSize: 14,
                       fontFamily: 'Montserrat',
                       fontWeight: FontWeight.w400,
                       color: Color(0xFFEAF5FF),
@@ -215,8 +189,9 @@ class _LearnMoreHeader extends StatelessWidget {
   }
 }
 
-
-/// SINGLE TILE WITH IMAGE + ANIMATION
+// ============================================================================
+// TILE WIDGET
+// ============================================================================
 class _DiseaseTile extends StatefulWidget {
   final String title;
   final String imagePath;
@@ -241,7 +216,6 @@ class _DiseaseTileState extends State<_DiseaseTile> {
   @override
   void initState() {
     super.initState();
-    // staggered animation
     Future.delayed(Duration(milliseconds: 70 * widget.index), () {
       if (mounted) {
         setState(() {
@@ -272,11 +246,9 @@ class _DiseaseTileState extends State<_DiseaseTile> {
             borderRadius: BorderRadius.circular(16),
             onTap: widget.onTap,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  // thumbnail image
                   Container(
                     width: 46,
                     height: 46,
@@ -293,6 +265,7 @@ class _DiseaseTileState extends State<_DiseaseTile> {
                     ),
                   ),
                   const SizedBox(width: 14),
+
                   Expanded(
                     child: Text(
                       widget.title,
@@ -305,7 +278,7 @@ class _DiseaseTileState extends State<_DiseaseTile> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+
                   const Icon(
                     Icons.chevron_right_rounded,
                     color: _darkBlue,

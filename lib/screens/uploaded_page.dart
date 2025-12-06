@@ -133,9 +133,8 @@ class _UploadedPageState extends State<UploadedPage>
             ),
           );
 
-      final publicUrl = supabase.storage
-          .from('history')
-          .getPublicUrl(storageFileName);
+      final publicUrl =
+          supabase.storage.from('history').getPublicUrl(storageFileName);
 
       debugPrint('✅ Supabase upload success. URL: $publicUrl');
       return publicUrl;
@@ -193,15 +192,15 @@ class _UploadedPageState extends State<UploadedPage>
             .doc(user.uid)
             .collection('history')
             .add({
-              'predictionLabel': predictionLabel,
-              'conditionKey': predictionLabel,
-              'confidence': confidence,
-              'risk': risk,
-              'imageUrl': imageUrl,
-              'imagePath': null,
-              'source': 'upload',
-              'timestamp': Timestamp.now(),
-            });
+          'predictionLabel': predictionLabel,
+          'conditionKey': predictionLabel,
+          'confidence': confidence,
+          'risk': risk,
+          'imageUrl': imageUrl,
+          'imagePath': null,
+          'source': 'upload',
+          'timestamp': Timestamp.now(),
+        });
 
         // Increment total scans
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
@@ -235,7 +234,6 @@ class _UploadedPageState extends State<UploadedPage>
       });
     }
   }
-
   // -----------------------
   // Cancel / guidelines (unchanged but styled)
   // -----------------------
@@ -297,16 +295,15 @@ class _UploadedPageState extends State<UploadedPage>
 
         return Center(
           child: SlideTransition(
-            position:
-                Tween<Offset>(
-                  begin: const Offset(0, 0.12),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                  ),
-                ),
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.12),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              ),
+            ),
             child: FadeTransition(
               opacity: CurvedAnimation(
                 parent: animation,
@@ -661,7 +658,6 @@ class _UploadedPageState extends State<UploadedPage>
     _animController.dispose();
     super.dispose();
   }
-
   // -----------------------
   // UI
   // -----------------------
@@ -672,7 +668,6 @@ class _UploadedPageState extends State<UploadedPage>
 
     return Scaffold(
       backgroundColor: _bg,
-      // AppBar with lighter look
       appBar: AppBar(
         backgroundColor: _bg,
         elevation: 0,
@@ -690,220 +685,236 @@ class _UploadedPageState extends State<UploadedPage>
           ),
         ),
       ),
-      body: SafeArea(
-        bottom: true,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
-          child: Column(
-            children: [
-              // Top info card
-              Material(
-                color: Colors.white,
-                elevation: 2,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
+
+      // ⭐ NEW STACK FOR BACKGROUND IMAGE
+      body: Stack(
+        children: [
+
+          // ⭐ BACKGROUND IMAGE — THIS IS WHAT YOU WANTED
+          Positioned.fill(
+            child: Image.asset(
+              "assets/images/bgg.jpg",
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // ⭐ FOREGROUND CONTENT (your entire UI stays the same)
+          SafeArea(
+            bottom: true,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+              child: Column(
+                children: [
+
+                  // ---------- TOP INFO CARD ----------
+                  Material(
+                    color: Colors.white,
+                    elevation: 2,
                     borderRadius: BorderRadius.circular(16),
-                    // subtle gradient top-left
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: _primaryGradient,
-                          boxShadow: [
-                            BoxShadow(
-                              color: _primaryDark.withOpacity(0.15),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.photo_camera,
-                          color: Colors.white,
-                          size: 20,
-                        ),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 14,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'Upload a clear nail photo',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: _darkText,
-                              ),
-                            ),
-                            SizedBox(height: 6),
-                            Text(
-                              'We’ll analyze the image for early signs of nail conditions.',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: _mutedText,
-                                height: 1.35,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        splashRadius: 20,
-                        onPressed: () {
-                          _showPhotoGuidelines(); // Open popup guidelines
-                        },
-                        icon: const Icon(
-                          Icons.info_outline,
-                          color: Color(0xFF64748B), // muted text color
-                          size: 20,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              // Uploader / preview (expanded)
-              Expanded(
-                child: GestureDetector(
-                  onTap: _pickImage,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: _card,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: _selectedImage == null
-                            ? _borderBlue.withOpacity(0.18)
-                            : _borderBlue,
-                        width: _selectedImage == null ? 1.0 : 1.6,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 18,
-                    ),
-                    child: _selectedImage == null
-                        ? _buildEmptyState()
-                        : _buildPreviewState(),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Analyze button (gradient)
-              SizedBox(
-                height: 52,
-                width: double.infinity,
-                child: GestureDetector(
-                  onTap: (_selectedImage == null || _isAnalyzing)
-                      ? null
-                      : _analyzeImage,
-                  child: AbsorbPointer(
-                    absorbing: (_selectedImage == null || _isAnalyzing),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: (_selectedImage == null || _isAnalyzing)
-                            ? LinearGradient(
-                                colors: [
-                                  _primarySolid.withOpacity(0.45),
-                                  _primaryDark.withOpacity(0.45),
-                                ],
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                              )
-                            : _primaryGradient,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: (_selectedImage == null || _isAnalyzing)
-                            ? []
-                            : [
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: _primaryGradient,
+                              boxShadow: [
                                 BoxShadow(
-                                  color: _primaryDark.withOpacity(0.18),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 6),
+                                  color: _primaryDark.withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
                                 ),
                               ],
-                      ),
-                      child: ElevatedButton(
-                        onPressed: (_selectedImage == null || _isAnalyzing)
-                            ? null
-                            : _analyzeImage,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.photo_camera,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
-                        ),
-                        child: _isAnalyzing
-                            ? Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Upload a clear nail photo',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: _darkText,
                                   ),
-                                  SizedBox(width: 10),
-                                  Text(
-                                    'Analyzing...',
+                                ),
+                                SizedBox(height: 6),
+                                Text(
+                                  'We’ll analyze the image for early signs of nail conditions.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: _mutedText,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          IconButton(
+                            splashRadius: 20,
+                            onPressed: () {
+                              _showPhotoGuidelines();
+                            },
+                            icon: const Icon(
+                              Icons.info_outline,
+                              color: Color(0xFF64748B),
+                              size: 20,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  // ---------- IMAGE UPLOAD SECTION ----------
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: _pickImage,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: _card,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: _selectedImage == null
+                                ? _borderBlue.withOpacity(0.18)
+                                : _borderBlue,
+                            width: _selectedImage == null ? 1.0 : 1.6,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 18,
+                        ),
+                        child: _selectedImage == null
+                            ? _buildEmptyState()
+                            : _buildPreviewState(),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ---------- ANALYZE BUTTON ----------
+                  SizedBox(
+                    height: 52,
+                    width: double.infinity,
+                    child: GestureDetector(
+                      onTap: (_selectedImage == null || _isAnalyzing)
+                          ? null
+                          : _analyzeImage,
+                      child: AbsorbPointer(
+                        absorbing: (_selectedImage == null || _isAnalyzing),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: (_selectedImage == null || _isAnalyzing)
+                                ? LinearGradient(
+                                    colors: [
+                                      _primarySolid.withOpacity(0.45),
+                                      _primaryDark.withOpacity(0.45),
+                                    ],
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                  )
+                                : _primaryGradient,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow:
+                                (_selectedImage == null || _isAnalyzing)
+                                    ? []
+                                    : [
+                                        BoxShadow(
+                                          color:
+                                              _primaryDark.withOpacity(0.18),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 6),
+                                        ),
+                                      ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: (_selectedImage == null || _isAnalyzing)
+                                ? null
+                                : _analyzeImage,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: _isAnalyzing
+                                ? Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                            Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(width: 10),
+                                      Text(
+                                        'Analyzing...',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : const Text(
+                                    'Analyze photo',
                                     style: TextStyle(
                                       fontSize: 16,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w700,
                                       color: Colors.white,
                                     ),
                                   ),
-                                ],
-                              )
-                            : const Text(
-                                'Analyze photo',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
 
-              const SizedBox(height: 10),
-            ],
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
-
   // -----------------------
   // Empty state widget (improved visuals)
   // -----------------------
@@ -911,7 +922,7 @@ class _UploadedPageState extends State<UploadedPage>
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // circle with cloud icon
+        // Circle with cloud upload icon
         Container(
           width: 94,
           height: 94,
@@ -964,7 +975,7 @@ class _UploadedPageState extends State<UploadedPage>
 
         const SizedBox(height: 18),
 
-        // subtle dashed hint
+        // Subtle hint
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
@@ -989,7 +1000,10 @@ class _UploadedPageState extends State<UploadedPage>
       children: [
         ScaleTransition(
           scale: Tween<double>(begin: 0.98, end: 1.0).animate(
-            CurvedAnimation(parent: _animController, curve: Curves.easeOutBack),
+            CurvedAnimation(
+              parent: _animController,
+              curve: Curves.easeOutBack,
+            ),
           ),
           child: Material(
             elevation: 6,
@@ -1004,14 +1018,19 @@ class _UploadedPageState extends State<UploadedPage>
                   File(_selectedImage!.path),
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
-                    return const Center(child: Text('Unable to show image'));
+                    return const Center(
+                      child: Text('Unable to load image'),
+                    );
                   },
                 ),
               ),
             ),
           ),
         ),
+
         const SizedBox(height: 12),
+
+        // Buttons below the preview
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -1054,11 +1073,17 @@ class _UploadedPageState extends State<UploadedPage>
   }
 }
 
+// -----------------------
+// Guideline row widget
+// -----------------------
 class _GuidelineRow extends StatelessWidget {
   final IconData icon;
   final List<TextSpan> spans;
 
-  const _GuidelineRow({required this.icon, required this.spans});
+  const _GuidelineRow({
+    required this.icon,
+    required this.spans,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1067,11 +1092,24 @@ class _GuidelineRow extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 2),
-          child: Icon(icon, size: 18, color: const Color(0xFF3B87D2)),
+          child: Icon(
+            icon,
+            size: 18,
+            color: Color(0xFF3B87D2),
+          ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: RichText(text: TextSpan(children: spans)),
+          child: RichText(
+            text: TextSpan(
+              children: spans,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.black87,
+                height: 1.35,
+              ),
+            ),
+          ),
         ),
       ],
     );

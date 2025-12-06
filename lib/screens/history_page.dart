@@ -11,117 +11,126 @@ class HistoryPage extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFEAF5FD),
-      body: Column(
+      backgroundColor: Colors.transparent, // removed solid color
+      body: Stack(
         children: [
-          _header(context), // ← updated gradient header matching ProfilePage
+          // ⭐ FULL BACKGROUND IMAGE
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/bgg.jpg',
+              fit: BoxFit.cover,
+            ),
+          ),
 
-          const SizedBox(height: 16),
+          // ⭐ PAGE CONTENT ABOVE BACKGROUND
+          Column(
+            children: [
+              _header(context),
 
-          Expanded(
-            child: user == null
-                ? const Center(
-                    child: Text(
-                      'Please log in to view your history.',
-                      style: TextStyle(color: Colors.black87),
-                    ),
-                  )
-                : StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(user.uid)
-                        .collection('history')
-                        .orderBy('timestamp', descending: true)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState ==
-                          ConnectionState.waiting) {
-                        return const Center(
-                            child: CircularProgressIndicator());
-                      }
+              const SizedBox(height: 16),
 
-                      if (snapshot.hasError) {
-                        return const Center(
-                            child: Text('Error loading history'));
-                      }
+              Expanded(
+                child: user == null
+                    ? const Center(
+                        child: Text(
+                          'Please log in to view your history.',
+                          style: TextStyle(color: Colors.black87),
+                        ),
+                      )
+                    : StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(user.uid)
+                            .collection('history')
+                            .orderBy('timestamp', descending: true)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
 
-                      if (!snapshot.hasData ||
-                          snapshot.data!.docs.isEmpty) {
-                        return const Center(
-                          child: Text(
-                            'No scan history yet.',
-                            style: TextStyle(color: Colors.black54),
-                          ),
-                        );
-                      }
+                          if (snapshot.hasError) {
+                            return const Center(
+                                child: Text('Error loading history'));
+                          }
 
-                      final docs = snapshot.data!.docs;
+                          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                            return const Center(
+                              child: Text(
+                                'No scan history yet.',
+                                style: TextStyle(color: Colors.black54),
+                              ),
+                            );
+                          }
 
-                      return ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
-                        itemCount: docs.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 16),
-                        itemBuilder: (context, index) {
-                          final doc = docs[index];
-                          final data =
-                              doc.data() as Map<String, dynamic>? ?? {};
+                          final docs = snapshot.data!.docs;
 
-                          final predictionLabel =
-                              (data['predictionLabel'] as String?) ??
-                                  'Unknown condition';
-                          final conditionKey =
-                              (data['conditionKey'] as String?) ??
-                                  predictionLabel;
+                          return ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
+                            itemCount: docs.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 16),
+                            itemBuilder: (context, index) {
+                              final doc = docs[index];
+                              final data = doc.data() as Map<String, dynamic>? ?? {};
 
-                          final double? confidence =
-                              (data['confidence'] is num)
-                                  ? (data['confidence'] as num).toDouble()
-                                  : null;
+                              final predictionLabel =
+                                  (data['predictionLabel'] as String?) ?? 'Unknown condition';
+                              final conditionKey =
+                                  (data['conditionKey'] as String?) ?? predictionLabel;
 
-                          final String? risk =
-                              data['risk'] as String?;
-                          final String? imageUrl =
-                              data['imageUrl'] as String?;
+                              final double? confidence =
+                                  (data['confidence'] is num)
+                                      ? (data['confidence'] as num).toDouble()
+                                      : null;
 
-                          final tsRaw = data['timestamp'];
-                          final Timestamp? ts =
-                              tsRaw is Timestamp ? tsRaw : null;
+                              final String? risk = data['risk'] as String?;
+                              final String? imageUrl = data['imageUrl'] as String?;
 
-                          final dateText = ts == null
-                              ? ''
-                              : DateFormat('MMMM d, yyyy')
-                                  .format(ts.toDate())
-                                  .toUpperCase();
+                              // ⭐ PH TIME FIX (UTC+8)
+                              final tsRaw = data['timestamp'];
+                              final Timestamp? ts = tsRaw is Timestamp ? tsRaw : null;
 
-                          final summaryText =
-                              _shortSummaryFor(conditionKey, risk);
+                              String dateText = "";
+                              if (ts != null) {
+                                final utc = ts.toDate();
+                                final phTime = utc.add(const Duration(hours: 8));
 
-                          return _HistoryCard(
-                            predictionLabel: predictionLabel,
-                            summary: summaryText,
-                            dateText: dateText,
-                            risk: risk,
-                            confidence: confidence,
-                            imageUrl: imageUrl,
-                            onViewMore: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/result_page',
-                                arguments: {
-                                  'imagePath': null,
-                                  'imageUrl': imageUrl,
-                                  'conditionKey': conditionKey,
-                                  'predictionLabel': predictionLabel,
-                                  'confidence': confidence,
+                                dateText = DateFormat('MMMM d, yyyy • h:mm a')
+                                    .format(phTime)
+                                    .toUpperCase();
+                              }
+
+                              final summaryText =
+                                  _shortSummaryFor(conditionKey, risk);
+
+                              return _HistoryCard(
+                                predictionLabel: predictionLabel,
+                                summary: summaryText,
+                                dateText: dateText,
+                                risk: risk,
+                                confidence: confidence,
+                                imageUrl: imageUrl,
+                                onViewMore: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/result_page',
+                                    arguments: {
+                                      'imagePath': null,
+                                      'imageUrl': imageUrl,
+                                      'conditionKey': conditionKey,
+                                      'predictionLabel': predictionLabel,
+                                      'confidence': confidence,
+                                    },
+                                  );
                                 },
                               );
                             },
                           );
                         },
-                      );
-                    },
-                  ),
+                      ),
+              ),
+            ],
           ),
         ],
       ),
@@ -129,7 +138,7 @@ class HistoryPage extends StatelessWidget {
   }
 
   // ---------------------------------------------------------------------------
-  // HEADER: matches the ProfilePage design exactly
+  // HEADER
   // ---------------------------------------------------------------------------
 
   Widget _header(BuildContext context) {
@@ -138,8 +147,8 @@ class HistoryPage extends StatelessWidget {
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Color(0xFF9FCCFF), // light blue
-            Color(0xFF5E95E8), // medium blue
+            Color(0xFF9FCCFF),
+            Color(0xFF5E95E8),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -152,27 +161,24 @@ class HistoryPage extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
-            // BACK BUTTON ONLY (no title)
+            // Back Button
             Row(
               children: [
                 IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back,
-                    color: Colors.white,
-                    size: 26,
-                  ),
+                  icon: const Icon(Icons.arrow_back,
+                      color: Colors.white, size: 26),
                   onPressed: () {
-                    Navigator.pushReplacementNamed(context, '/profile');
+                    Navigator.pushReplacementNamed(context, '/dashboard');
                   },
                 ),
                 const Spacer(),
-                const SizedBox(width: 48), // balance layout
+                const SizedBox(width: 48),
               ],
             ),
 
             const SizedBox(height: 6),
 
-            // ABOUT | HISTORY PILL HERE
+            // ABOUT | HISTORY CHIP
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
@@ -189,7 +195,7 @@ class HistoryPage extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ABOUT → goes to profile page
+                  // ABOUT tab → profile
                   GestureDetector(
                     onTap: () {
                       Navigator.pushReplacementNamed(context, '/profile');
@@ -198,7 +204,7 @@ class HistoryPage extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
 
-                  // HISTORY active
+                  // HISTORY active tab
                   _tabChip("HISTORY", true),
                 ],
               ),
@@ -229,7 +235,7 @@ class HistoryPage extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// HISTORY CARDS (unchanged logic, but UI modern)
+// HISTORY CARD UI
 // ---------------------------------------------------------------------------
 
 class _HistoryCard extends StatelessWidget {
@@ -271,7 +277,7 @@ class _HistoryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image + text row
+          // IMAGE + TEXT
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -286,6 +292,7 @@ class _HistoryCard extends StatelessWidget {
                       : const Icon(Icons.image, size: 40, color: Colors.white),
                 ),
               ),
+
               const SizedBox(width: 12),
 
               Expanded(
@@ -341,7 +348,7 @@ class _HistoryCard extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // Date + view more
+          // DATE & VIEW MORE
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -373,7 +380,7 @@ class _HistoryCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Short summary logic (unchanged)
+// SUMMARY TEXT
 // ---------------------------------------------------------------------------
 
 String _shortSummaryFor(String conditionKey, String? risk) {

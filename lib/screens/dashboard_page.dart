@@ -44,13 +44,16 @@ Future<String> getLastScanText() async {
   final data = snap.docs.first.data();
   if (data['timestamp'] is! Timestamp) return "none";
 
-  final ts = (data['timestamp'] as Timestamp).toDate();
+  final ts = (data['timestamp'] as Timestamp).toDate(); // UTC from Firestore
+
+  // ⭐ Convert to Philippine time (UTC+8)
+  final phTime = ts.add(const Duration(hours: 8));
 
   // FORMAT DATE
-  final date = DateFormat('MMMM d, yyyy').format(ts).toUpperCase();
+  final date = DateFormat('MMMM d, yyyy').format(phTime).toUpperCase();
 
   // FORMAT TIME (12-hour format)
-  final time = DateFormat('h:mm a').format(ts); // Example: 3:42 PM
+  final time = DateFormat('h:mm a').format(phTime);
 
   return "$date • $time";
 }
@@ -212,34 +215,31 @@ Future<String> getLastScanText() async {
         ),
       ),
 
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // soft background circles
-            Positioned(
-              top: -40,
-              right: -30,
-              child: Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.primaryBlue.withOpacity(0.08),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 80,
-              left: -50,
-              child: Container(
-                width: 180,
-                height: 180,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.scanButton.withOpacity(0.05),
-                ),
-              ),
-            ),
+body: SafeArea(
+  child: Stack(
+    children: [
+      // ⭐ BACKGROUND IMAGE HERE
+      Positioned.fill(
+        child: Image.asset(
+          'assets/images/bgg.jpg',
+          fit: BoxFit.cover,
+        ),
+      ),
+
+      // OPTIONAL: You can keep your soft background circles
+      Positioned(
+        top: -40,
+        right: -30,
+        child: Container(
+          width: 150,
+          height: 150,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withOpacity(0.05),
+          ),
+        ),
+      ),
+
 
             SingleChildScrollView(
               physics: const BouncingScrollPhysics(),

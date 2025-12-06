@@ -75,9 +75,8 @@ class _ScanPageState extends State<ScanPage> {
             ),
           );
 
-      final publicUrl = supabase.storage
-          .from('history')
-          .getPublicUrl(storageFileName);
+      final publicUrl =
+          supabase.storage.from('history').getPublicUrl(storageFileName);
 
       debugPrint('✅ Supabase upload success (scan). URL: $publicUrl');
       return publicUrl;
@@ -187,21 +186,21 @@ class _ScanPageState extends State<ScanPage> {
 
     final diseaseInfoEntry =
         diseaseDatabase[label] ??
-        diseaseDatabase.entries
-            .firstWhere(
-              (e) => e.key.toLowerCase() == normalizedLabel,
-              orElse: () => MapEntry(
-                "Unknown",
-                DiseaseInfo(
-                  name: label,
-                  description:
-                      "No detailed information is available for this nail condition.",
-                  signs: [],
-                  image: "",
-                ),
-              ),
-            )
-            .value;
+            diseaseDatabase.entries
+                .firstWhere(
+                  (e) => e.key.toLowerCase() == normalizedLabel,
+                  orElse: () => MapEntry(
+                    "Unknown",
+                    DiseaseInfo(
+                      name: label,
+                      description:
+                          "No detailed information is available for this nail condition.",
+                      signs: [],
+                      image: "",
+                    ),
+                  ),
+                )
+                .value;
 
     bool isHealthy = normalizedLabel.contains("healthy");
 
@@ -219,7 +218,6 @@ class _ScanPageState extends State<ScanPage> {
           titlePadding: const EdgeInsets.only(top: 15, bottom: 4),
           contentPadding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
           actionsPadding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-
           title: Column(
             children: [
               const Text(
@@ -237,7 +235,6 @@ class _ScanPageState extends State<ScanPage> {
               ),
             ],
           ),
-
           content: SingleChildScrollView(
             child: Column(
               children: [
@@ -247,7 +244,6 @@ class _ScanPageState extends State<ScanPage> {
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 3),
-
                 Text(
                   label,
                   style: const TextStyle(
@@ -256,14 +252,12 @@ class _ScanPageState extends State<ScanPage> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-
                 const SizedBox(height: 6),
                 Text(
                   "Confidence: ${(confidence * 100).toStringAsFixed(1)}%",
                   style: const TextStyle(fontSize: 12, color: Colors.black54),
                 ),
                 const SizedBox(height: 12),
-
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
@@ -283,7 +277,6 @@ class _ScanPageState extends State<ScanPage> {
               ],
             ),
           ),
-
           actions: [
             SizedBox(
               height: 44,
@@ -342,16 +335,15 @@ class _ScanPageState extends State<ScanPage> {
 
         return Center(
           child: SlideTransition(
-            position:
-                Tween<Offset>(
-                  begin: const Offset(0, 0.12),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                  ),
-                ),
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.12),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              ),
+            ),
             child: FadeTransition(
               opacity: CurvedAnimation(
                 parent: animation,
@@ -381,7 +373,6 @@ class _ScanPageState extends State<ScanPage> {
                       ),
                     ],
                   ),
-
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -459,7 +450,6 @@ class _ScanPageState extends State<ScanPage> {
                                   ),
                                 ],
                               ),
-
                               SizedBox(height: 6),
                               _GuidelineRow(
                                 icon: Icons.flash_off_outlined,
@@ -477,14 +467,13 @@ class _ScanPageState extends State<ScanPage> {
                                   ),
                                 ],
                               ),
-
                               SizedBox(height: 6),
                               _GuidelineRow(
                                 icon: Icons.crop_free,
                                 spans: [
                                   TextSpan(
                                     text:
-                                        'Keep the nail flat to the camera, filling ',
+                                    'Keep the nail flat to the camera, filling ',
                                     style: TextStyle(color: Color(0xFF4E5A65)),
                                   ),
                                   TextSpan(
@@ -500,7 +489,6 @@ class _ScanPageState extends State<ScanPage> {
                                   ),
                                 ],
                               ),
-
                               SizedBox(height: 6),
                               _GuidelineRow(
                                 icon: Icons.brush_outlined,
@@ -518,7 +506,6 @@ class _ScanPageState extends State<ScanPage> {
                                   ),
                                 ],
                               ),
-
                               SizedBox(height: 6),
                               _GuidelineRow(
                                 icon: Icons.center_focus_strong_outlined,
@@ -536,7 +523,6 @@ class _ScanPageState extends State<ScanPage> {
                                   ),
                                 ],
                               ),
-
                               SizedBox(height: 6),
                               _GuidelineRow(
                                 icon: Icons.layers_outlined,
@@ -558,7 +544,6 @@ class _ScanPageState extends State<ScanPage> {
                                   ),
                                 ],
                               ),
-
                               SizedBox(height: 16),
                               Text(
                                 'Example photo',
@@ -568,9 +553,7 @@ class _ScanPageState extends State<ScanPage> {
                                   color: Color(0xFF475569),
                                 ),
                               ),
-
                               SizedBox(height: 6),
-
                               ClipRRect(
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(16),
@@ -623,9 +606,8 @@ class _ScanPageState extends State<ScanPage> {
       },
     );
   }
-
   // =====================================================================
-  // ⭐ UI
+  // ⭐ UI (inspo-style)  + pinned footer
   // =====================================================================
   @override
   Widget build(BuildContext context) {
@@ -636,87 +618,199 @@ class _ScanPageState extends State<ScanPage> {
       if (!_isPopupShown) _showPhotoGuidelines();
     });
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFEAF5FD),
-      body: SafeArea(
-        child: Stack(
+    final frameWidth = w * 0.78;
+    final frameHeight = frameWidth * 1.08;
+
+    // ⭐ Footer bar widget (same design as before)
+    final Widget footerBar = GestureDetector(
+      onTap: () => Navigator.pushNamed(context, '/learnmore'),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        color: Colors.black.withOpacity(.85),
+        child: Row(
           children: [
-            Positioned(
-              top: 6,
-              right: 10,
-              child: IconButton(
-                icon: const Icon(Icons.close, size: 26),
-                onPressed: () => Navigator.pushNamed(context, '/dashboard'),
+            Image.asset(
+              "assets/images/learnmore_icon.png",
+              width: 18,
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                "Explore nail health indicators and their meanings.",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white70,
+                ),
               ),
             ),
+            const Text(
+              "Learn more",
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.lightBlueAccent,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
 
-            Column(
+    return Scaffold(
+      body: Stack(
+        children: [
+          // 🔹 Background image
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/bgg.jpg',
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // 🔹 MAIN CONTENT
+          SafeArea(
+            child: Column(
               children: [
-                const SizedBox(height: 28),
-
+                // top bar with close
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    const Text(
-                      "Scan your Nail",
-                      style: TextStyle(
-                        color: Color(0xFF001372),
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 24),
+                      color: Colors.black87,
+                      onPressed: () =>
+                          Navigator.pushNamed(context, '/dashboard'),
                     ),
-                    const SizedBox(width: 6),
-                    Image.asset("assets/images/logo.png", height: 26),
                   ],
                 ),
 
                 const SizedBox(height: 4),
+
+                const Text(
+                  "Scan your Nail",
+                  style: TextStyle(
+                    color: Color(0xFF001372),
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
                 const Text(
                   "Align your nail within the frame",
-                  style: TextStyle(fontSize: 13, color: Colors.black54),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black54,
+                  ),
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
-                // SCAN FRAME
-                Container(
-                  width: w * 0.80,
-                  height: w * 1.0,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF4F6FA),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: const Color(0xFF3B87D2),
-                      width: 3,
-                    ),
-                  ),
-                  child: _capturedImage == null
-                      ? const SizedBox()
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
+                // =================== SCAN FRAME ===================
+                SizedBox(
+                  width: frameWidth,
+                  height: frameHeight,
+                  child: Stack(
+                    children: [
+                      // photo preview (behind frame)
+                      if (_capturedImage != null)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
                           child: Image.file(
                             File(_capturedImage!.path),
+                            width: frameWidth,
+                            height: frameHeight,
                             fit: BoxFit.cover,
                           ),
                         ),
+
+                      // Corners
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        child: _cornerBlack(),
+                      ),
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Transform.scale(
+                          scaleX: -1,
+                          child: _cornerBlack(),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        child: Transform.scale(
+                          scaleY: -1,
+                          child: _cornerBlack(),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Transform.scale(
+                          scaleX: -1,
+                          scaleY: -1,
+                          child: _cornerBlack(),
+                        ),
+                      ),
+
+                      // Top center bar
+                      Positioned(
+                        top: 0,
+                        left: (frameWidth - 70) / 2,
+                        child: _strokeHorizontal(),
+                      ),
+                      // Bottom center bar
+                      Positioned(
+                        bottom: 0,
+                        left: (frameWidth - 70) / 2,
+                        child: _strokeHorizontal(),
+                      ),
+                      // Left middle bar
+                      Positioned(
+                        left: 0,
+                        top: (frameHeight - 70) / 2,
+                        child: _strokeVertical(),
+                      ),
+                      // Right middle bar
+                      Positioned(
+                        right: 0,
+                        top: (frameHeight - 70) / 2,
+                        child: _strokeVertical(),
+                      ),
+                    ],
+                  ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
+                // Upload button
                 GestureDetector(
                   onTap: () => Navigator.pushNamed(context, '/upload'),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 9,
+                      horizontal: 22,
+                      vertical: 10,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: const Color(0xFF3B87D2),
-                        width: 1.2,
+                        color: const Color(0xFF3B70B9),
+                        width: 1.3,
                       ),
-                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 8,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
@@ -729,7 +823,11 @@ class _ScanPageState extends State<ScanPage> {
                           ),
                         ),
                         SizedBox(width: 6),
-                        Icon(Icons.upload, color: Color(0xFF001372), size: 18),
+                        Icon(
+                          Icons.upload,
+                          size: 18,
+                          color: Color(0xFF001372),
+                        ),
                       ],
                     ),
                   ),
@@ -737,34 +835,38 @@ class _ScanPageState extends State<ScanPage> {
 
                 const SizedBox(height: 32),
 
+                // Camera button
                 GestureDetector(
                   onTap: _loading ? null : _captureImage,
                   child: Container(
-                    width: 72,
-                    height: 72,
+                    width: 80,
+                    height: 80,
                     decoration: BoxDecoration(
-                      color: Colors.white,
                       shape: BoxShape.circle,
+                      color: Colors.white,
                       border: Border.all(
                         width: 3,
-                        color: const Color(0xFF3B87D2),
+                        color: const Color(0xFF3B70B9),
                       ),
                       boxShadow: const [
                         BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 6,
-                          offset: Offset(0, 2),
+                          color: Colors.black26,
+                          blurRadius: 8,
+                          offset: Offset(0, 3),
                         ),
                       ],
                     ),
                     child: Center(
                       child: Container(
-                        width: 46,
-                        height: 46,
+                        width: 52,
+                        height: 52,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: LinearGradient(
-                            colors: [Color(0xFFBFD9FF), Color(0xFF8EC4FF)],
+                            colors: [
+                              Color(0xFF2F56B8),
+                              Color(0xFF0A1C72),
+                            ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -774,53 +876,88 @@ class _ScanPageState extends State<ScanPage> {
                   ),
                 ),
 
-                const Spacer(),
+                const SizedBox(height: 90), // space so not covered by footer
               ],
             ),
+          ),
 
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: GestureDetector(
-                onTap: () => Navigator.pushNamed(context, '/learnmore'),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 14,
-                  ),
-                  color: Colors.black.withOpacity(.85),
-                  child: Row(
-                    children: [
-                      Image.asset(
-                        "assets/images/learnmore_icon.png",
-                        width: 18,
-                      ),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Text(
-                          "Explore nail health indicators and their meanings.",
-                          style: TextStyle(fontSize: 13, color: Colors.white70),
-                        ),
-                      ),
-                      const Text(
-                        "Learn more",
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.lightBlueAccent,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          // ⭐ PINNED BOTTOM BAR (SAGAD)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: footerBar,
+          ),
+        ],
       ),
     );
   }
+
+  // -----------------------------------------------------------------------
+  // 🔹 Frame helpers (corners + strokes)
+  // -----------------------------------------------------------------------
+  Widget _cornerBlack() {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: CustomPaint(
+        painter: _CornerPainter(),
+      ),
+    );
+  }
+
+  Widget _strokeHorizontal() {
+    return Container(
+      width: 70,
+      height: 5,
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(3),
+      ),
+    );
+  }
+
+  Widget _strokeVertical() {
+    return Container(
+      width: 5,
+      height: 70,
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(3),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 🎨 Custom painter for the L-shaped corner
+// ---------------------------------------------------------------------------
+class _CornerPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.black
+      ..strokeWidth = 5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    // horizontal line (top)
+    canvas.drawLine(
+      const Offset(0, 0),
+      Offset(size.width * 0.7, 0),
+      paint,
+    );
+
+    // vertical line (left)
+    canvas.drawLine(
+      const Offset(0, 0),
+      Offset(0, size.height * 0.7),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ---------------------------------------------------------------------------
