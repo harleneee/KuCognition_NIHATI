@@ -659,60 +659,167 @@ class SectionTitle extends StatelessWidget {
     );
   }
 }
-
 class RecentScansCard extends StatelessWidget {
   const RecentScansCard();
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const HistoryPage(),
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return _emptyCard("No recent scans");
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('history')
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .snapshots(),
+      builder: (context, snapshot) {
+        // Loading
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _emptyCard("Loading...");
+        }
+
+        // No data
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return _emptyCard("No recent scans");
+        }
+
+        // We have 1 latest scan
+        final data = snapshot.data!.docs.first.data() as Map<String, dynamic>;
+
+        final String prediction =
+            (data['predictionLabel'] ?? 'Unknown').toString();
+
+        final String? imageUrl = data['imageUrl'];
+        final String? risk = data['risk'];
+        final double? confidence =
+            data['confidence'] is num ? (data['confidence'] + 0.0) : null;
+
+        // Timestamp → PH TIME
+        String dateText = "Unknown date";
+        if (data['timestamp'] is Timestamp) {
+          final ph = (data['timestamp'] as Timestamp)
+              .toDate()
+              .add(const Duration(hours: 8));
+          dateText = DateFormat('MMM d, yyyy – h:mm a').format(ph);
+        }
+
+        return InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HistoryPage()),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Card(
+            elevation: 3,
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14.0),
+              child: Row(
+                children: [
+                  // Thumbnail
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      color: Colors.grey.shade200,
+                      child: imageUrl != null && imageUrl.isNotEmpty
+                          ? Image.network(imageUrl, fit: BoxFit.cover)
+                          : const Icon(Icons.image, color: Colors.grey),
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  // Text info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          prediction,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryBlue,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          dateText,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        if (risk != null || confidence != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              "Risk: ${risk ?? 'N/A'} • Conf: ${confidence != null ? (confidence * 100).toStringAsFixed(1) + '%' : 'N/A'}",
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  const Icon(Icons.chevron_right, color: Colors.grey),
+                ],
+              ),
+            ),
           ),
         );
       },
-      borderRadius: BorderRadius.circular(12),
-      child: Card(
-        elevation: 3,
-        color: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 14),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  color: AppColors.lightBackground,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.history,
-                  color: AppColors.primaryBlue,
-                  size: 22,
+    );
+  }
+
+  // helper empty card
+  Widget _emptyCard(String text) {
+    return Card(
+      elevation: 3,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(
+                color: AppColors.lightBackground,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.history,
+                  color: AppColors.primaryBlue, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'No recent scans',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                color: Colors.grey,
-                size: 22,
-              ),
-            ],
-          ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.grey),
+          ],
         ),
       ),
     );
