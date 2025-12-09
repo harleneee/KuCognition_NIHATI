@@ -261,8 +261,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 25),
 
                   if (isAboutSelected) ...[
-                    _editProfileButton(),
-                    const SizedBox(height: 24),
+                   const SizedBox(height: 24),
 
                     // METRICS
                     Padding(
@@ -563,32 +562,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _editProfileButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 22),
-      child: ElevatedButton.icon(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF3B87D2),
-          minimumSize: const Size(double.infinity, 46),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          elevation: 5,
-        ),
-        onPressed: () {},
-        icon: const Icon(Icons.edit, color: Colors.white),
-        label: const Text(
-          "Edit Profile",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _metricCard({
     required String label,
     required String value,
@@ -703,7 +676,7 @@ class _ProfilePageState extends State<ProfilePage> {
           if (line2 != null) ...[
             const SizedBox(height: 2),
             Text(
-              line2!,
+              line2,
               style: const TextStyle(
                 fontSize: 13,
                 color: Color(0xFF6D777F),

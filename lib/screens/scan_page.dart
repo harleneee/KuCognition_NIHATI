@@ -118,18 +118,15 @@ class _ScanPageState extends State<ScanPage> {
     }
   }
 
-  // =====================================================================
-  // ⭐ NEW RISK ALGORITHM
-  // =====================================================================
   String _riskForLabel(String label, double conf) {
-    // 🔴 HIGH-SEVERITY DISEASES
+    // HIGH-SEVERITY DISEASES
     if (label == 'Acral Lentiginous Melanoma' || label == 'Bluish Nail') {
       if (conf >= 0.85) return 'High';
       if (conf >= 0.60) return 'Moderate';
       return 'Low–Moderate';
     }
 
-    // 🟠 MODERATE-SEVERITY DISEASES
+    // MODERATE-SEVERITY DISEASES
     if (label == 'Clubbing' ||
         label == 'Onychogryphosis' ||
         label == 'Pitting' ||
@@ -140,14 +137,14 @@ class _ScanPageState extends State<ScanPage> {
       return 'Low';
     }
 
-    // 🟢 LOW-SEVERITY (HEALTHY)
+    // LOW-SEVERITY (HEALTHY)
     if (label == 'Healthy Nail') return 'Low';
 
     return 'Unknown';
   }
 
   // =====================================================================
-  // ⭐ Save history (scan)
+  // Save history (scan)
   // =====================================================================
   Future<void> _saveScanToHistory({
     required String label,
