@@ -10,6 +10,13 @@ from pydantic import BaseModel
 
 
 # ============================================================
+# 0. SIMPLE "MEMORY" OF LAST CONDITION
+# ============================================================
+
+LAST_CONDITION: Optional[str] = None  # remembers last condition explained briefly
+
+
+# ============================================================
 # 1. PREPROCESS (MUST MATCH TRAINING)
 # ============================================================
 
@@ -152,6 +159,35 @@ def has_strong_emotion(text: str) -> bool:
     """Detect if the user text clearly expresses fear/worry."""
     t = text.lower()
     return any(word in t for word in EMOTION_WORDS)
+
+
+# ============================================================
+# 4C. FOLLOW-UP QUESTION DETECTION
+# ============================================================
+
+FOLLOWUP_PATTERNS = [
+    "tell me more",
+    "explain this more",
+    "explain more",
+    "can you explain more",
+    "more details",
+    "details please",
+    "what does this mean",
+    "what does that mean",
+    "elaborate this",
+    "elaborate more",
+    "explain it more",
+    "i want to know more",
+]
+
+
+def is_followup_question(text: str) -> bool:
+    """
+    Very simple rule-based detector: checks if the user is asking
+    for more explanation about something that was just mentioned.
+    """
+    t = text.lower()
+    return any(pat in t for pat in FOLLOWUP_PATTERNS)
 
 
 # ============================================================
@@ -632,11 +668,14 @@ def build_reply(msg: str, intent: str) -> str:
 
 @app.post("/predict_intent", response_model=ChatResponse)
 def predict_intent(req: ChatRequest) -> ChatResponse:
+    global LAST_CONDITION
+
     user_text = req.message
 
     # 0) Learn-More / DiseaseDetailsPage path: condition is known → DETAILED explanation
     if req.condition is not None:
         reply = explain_condition_detailed(req.condition)
+        LAST_CONDITION = req.condition  # remember last detailed condition too
         return ChatResponse(
             intent="nail_condition_info_detailed",
             condition=req.condition,
@@ -645,12 +684,22 @@ def predict_intent(req: ChatRequest) -> ChatResponse:
 
     cleaned = preprocess(user_text)
 
+    # 0.3) FOLLOW-UP: user asks "tell me more / explain this more" → use LAST_CONDITION
+    if is_followup_question(cleaned) and LAST_CONDITION is not None:
+        reply = explain_condition_detailed(LAST_CONDITION)
+        return ChatResponse(
+            intent="nail_condition_info_detailed_followup",
+            condition=LAST_CONDITION,
+            reply=reply,
+        )
+
     # 0.5) RULE OVERRIDE:
     # If user clearly typed a disease name:
     #   - with strong emotion → emotion-aware brief explanation
     #   - otherwise → normal brief explanation
     cond_from_keywords = match_known_condition(cleaned)
     if cond_from_keywords is not None:
+        LAST_CONDITION = cond_from_keywords  # remember this condition
         if has_strong_emotion(cleaned):
             reply = explain_condition_with_emotion(cond_from_keywords)
             return ChatResponse(
@@ -673,6 +722,7 @@ def predict_intent(req: ChatRequest) -> ChatResponse:
     # 2) If intent is condition-related, use symptom text classifier → BRIEF info
     if pred_intent in ["nail_condition_info", "scan_result_explanation"]:
         condition = classify_symptom(user_text)
+        LAST_CONDITION = condition  # remember last brief condition
         reply = explain_condition_brief(condition)
         return ChatResponse(intent=pred_intent, condition=condition, reply=reply)
 
