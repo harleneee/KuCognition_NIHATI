@@ -373,7 +373,7 @@ def explain_condition_detailed(condition: str) -> str:
             "**Associated signs to watch for:**\n"
             "• Red, scaly skin plaques on elbows, knees, scalp or trunk\n"
             "• Joint pain or stiffness (possible psoriatic arthritis)\n"
-            "• Nail discoloration or separation from the nail bed\n\n"
+            "• Nail discoloration or separation of the nail from the nail bed\n\n"
             "**What you can do:**\n"
             "• Arrange a consultation with a **dermatologist** if pitting is persistent or widespread\n"
             "• Mention any skin rashes or joint symptoms you have\n"
@@ -590,7 +590,10 @@ def build_reply(msg: str, intent: str) -> str:
                 "You can open your **Profile** from the bottom navigation bar. "
                 "There you’ll see your name, email, total scans, and most common result."
             )
-        if "scan" in m or "camera" in m or "start" in m or "capture" in m or "analyze" in m:
+        if (
+            "scan" in m or "camera" in m or "start" in m or
+            "capture" in m or "analyze" in m
+        ):
             return (
                 "To start a new scan, go to the **Dashboard** and tap the center Scan button. "
                 "Follow the on-screen guide to capture a clear image of your nail."
@@ -608,8 +611,8 @@ def build_reply(msg: str, intent: str) -> str:
         return (
             "Here’s what KuCognition and KuBot can do:\n\n"
             "• Analyze nail images using a deep-learning model.\n"
-            "• Detect patterns like acral lentiginous melanoma, clubbing, "
-            "  onychogryphosis, pitting, Beau’s lines, bluish nail, koilonychia and healthy nail.\n"
+            "• Detect patterns like acral lentiginous melanoma, clubbing,"
+            " onychogryphosis, pitting, beau’s lines, bluish nail, koilonychia and healthy nail.\n"
             "• Explain what these conditions generally mean.\n"
             "• Answer questions about accuracy, app navigation, and health awareness.\n\n"
             "All information is for awareness only — not a medical diagnosis."
@@ -625,6 +628,24 @@ def build_reply(msg: str, intent: str) -> str:
 
     # --- faq treatment ---
     if intent == "faq_treatment":
+        m = msg.lower()
+
+        # ✅ UPDATED: SPECIAL CASE handles systemic/systematic + related/connection variants
+        if ("relation" in m or "related" in m or "connection" in m) and (
+            "systemic" in m or "systematic" in m or "system-wide" in m or "whole body" in m
+        ):
+            return (
+                "Nails are closely linked to overall or **systemic health** because they share the same "
+                "blood supply and nutrients as the rest of the body. When organs such as the heart, lungs, "
+                "liver, or blood system are affected, changes in blood flow, oxygen level, or nutrient balance "
+                "can appear as changes in the nails — for example spoon nails in iron-deficiency anemia, "
+                "bluish nails with low oxygen, or clubbing in some chronic heart and lung diseases.\n\n"
+                "KuCognition uses these visible nail patterns only for **health awareness**, not for diagnosis. "
+                "If a nail change is persistent or worrying, a healthcare professional still needs to evaluate "
+                "the whole person, not just the nails."
+            )
+
+        # default treatment answer
         return (
             "KuBot cannot recommend specific treatments, medications, home remedies, or cures. "
             "Treatment for any nail condition—whether it's an infection, an inflammatory disease "
