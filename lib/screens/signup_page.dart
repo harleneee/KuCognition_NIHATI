@@ -72,41 +72,40 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFEAF5FD),
-      body: Column(
-        children: [
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.20,
-            child: const BreathingGradient(),
-          ),
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(35)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.07),
-                    blurRadius: 25,
-                    spreadRadius: 8,
-                    offset: const Offset(0, -5),
-                  ),
-                ],
-              ),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+Widget build(BuildContext context) {
+  return Scaffold(
+    resizeToAvoidBottomInset: true,
+    backgroundColor: const Color(0xFFEAF5FD),
+    body: Column(
+      children: [
+        SizedBox(
+          height: MediaQuery.of(context).size.height * 0.20,
+          child: const BreathingGradient(),
+        ),
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(35)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.07),
+                  blurRadius: 25,
+                  spreadRadius: 8,
+                  offset: const Offset(0, -5),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 6),
-                  Image.asset(
-                    "assets/images/logo.png",
-                    width: 65,
-                  ),
+                  Image.asset("assets/images/logo.png", width: 65),
                   const SizedBox(height: 15),
                   const Text(
                     "Sign Up",
@@ -127,18 +126,21 @@ class _SignUpPageState extends State<SignUpPage> {
                     style: TextStyle(fontSize: 13),
                   ),
                   const SizedBox(height: 22),
+
                   _roundedField(
                     controller: fullNameController,
                     hint: "Full Name",
                     icon: Icons.person_outline,
                   ),
                   const SizedBox(height: 18),
+
                   _roundedField(
                     controller: emailController,
                     hint: "Email",
                     icon: Icons.email_outlined,
                   ),
                   const SizedBox(height: 18),
+
                   _roundedField(
                     controller: passwordController,
                     hint: "Password",
@@ -159,6 +161,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                   ),
                   const SizedBox(height: 18),
+
                   _roundedField(
                     controller: confirmPasswordController,
                     hint: "Confirm Password",
@@ -178,7 +181,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       },
                     ),
                   ),
+
                   const SizedBox(height: 30),
+
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -188,7 +193,6 @@ class _SignUpPageState extends State<SignUpPage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
-                        elevation: 3,
                       ),
                       onPressed: _goToExtraPage,
                       child: const Text(
@@ -201,7 +205,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 16),
+
                   GestureDetector(
                     onTap: () =>
                         Navigator.pushReplacementNamed(context, "/login"),
@@ -217,10 +223,11 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _roundedField({
     required TextEditingController controller,
